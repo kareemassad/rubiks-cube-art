@@ -1,0 +1,46 @@
+import { describe, expect, it } from 'vitest'
+import {
+  canGenerateInstructions,
+  chooseLayoutForCubeCount,
+  clampColumnsForRows,
+  clampCubeDimension,
+  clampRowsForColumns,
+  layoutLimitMessage,
+  MAX_GENERATION_CUBES,
+  maxColumnsForRows,
+  maxRowsForColumns,
+} from '../layout'
+
+describe('layout limits', () => {
+  it('clamps pathological dimensions to a bounded preview range', () => {
+    expect(clampCubeDimension(3)).toBe(3)
+    expect(clampCubeDimension(3000)).toBe(MAX_GENERATION_CUBES)
+    expect(clampCubeDimension(0)).toBe(1)
+    expect(clampCubeDimension(Number.NaN)).toBe(1)
+  })
+
+  it('allows long strips but blocks huge instruction jobs', () => {
+    expect(canGenerateInstructions(3, 200)).toBe(true)
+    expect(canGenerateInstructions(200, 3)).toBe(true)
+    expect(canGenerateInstructions(40, 40)).toBe(true)
+    expect(canGenerateInstructions(50, 40)).toBe(true)
+    expect(canGenerateInstructions(51, 40)).toBe(false)
+    expect(layoutLimitMessage(51, 40)).toContain('2040 cubes is too many')
+  })
+
+  it('derives complementary row and column limits from the exact instruction budget', () => {
+    expect(maxColumnsForRows(3)).toBe(666)
+    expect(maxRowsForColumns(3)).toBe(666)
+    expect(maxColumnsForRows(40)).toBe(50)
+    expect(maxRowsForColumns(40)).toBe(50)
+    expect(clampColumnsForRows(200, 3)).toBe(200)
+    expect(clampRowsForColumns(200, 3)).toBe(200)
+    expect(clampColumnsForRows(200, 200)).toBe(10)
+  })
+
+  it('chooses an aspect-aware layout from a cube count', () => {
+    expect(chooseLayoutForCubeCount(30, 1.2)).toEqual({ rows: 5, cols: 6 })
+    expect(chooseLayoutForCubeCount(2000, 1)).toEqual({ rows: 50, cols: 40 })
+    expect(chooseLayoutForCubeCount(3000, 2)).toEqual({ rows: 40, cols: 50 })
+  })
+})

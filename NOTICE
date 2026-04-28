@@ -1,0 +1,8 @@
+This project adapts ideas and selected implementation patterns from:
+
+jeffhuber/rubiks-solver
+https://github.com/jeffhuber/rubiks-solver
+MIT License
+
+The reused concepts include a 54-facelet cube representation, cubejs/Kociemba
+solver integration, move parsing, and 2D/3D cube visualization patterns.
