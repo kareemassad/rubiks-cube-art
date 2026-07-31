@@ -53,6 +53,8 @@ The instruction player will continue to show one cube at a time.
 - Show `Cube N of M` in the header.
 - Show the current step and total step count.
 - Keep the target face and current cube state prominent.
+- Show the complete move sequence in one visible, numbered list.
+- Highlight the current move during playback without hiding future moves.
 - Keep the next move visible without requiring a scroll.
 - Keep `Back` and `Next` controls in a sticky bottom area.
 - Use a full-screen sheet on phones.
@@ -61,6 +63,21 @@ The instruction player will continue to show one cube at a time.
 - Respect safe-area insets and `prefers-reduced-motion`.
 
 The sheet will not render instructions for every cube at once. The selected cube remains the single source of truth for the instruction view.
+
+### Move optimization and correctness
+
+The generator will use a bounded shortest-practical search.
+
+- Keep `cubejs` as the solver for legal cube states.
+- Try more than one legal full-cube completion when the target face leaves hidden pieces unconstrained.
+- Solve each candidate and keep the exact candidate with the fewest build moves.
+- Use a fixed candidate and depth budget so generation remains browser-safe.
+- Normalize move sequences before storing and displaying them.
+- Verify the final build moves by applying them to a solved cube and comparing the visible face with the requested target face.
+- Accept a result only when the visible face matches all nine target stickers.
+- If no exact result is found within the budget, stop generation with a clear error. Do not return an approximate result as a valid solution.
+
+The app may report that generation failed for a difficult target. A failed generation is safer than instructions that build the wrong face.
 
 ## Responsive and iOS-style improvements
 
@@ -81,6 +98,7 @@ The sheet will not render instructions for every cube at once. The selected cube
 - `CubeCard` represents one physical cube instead of only a generated face group.
 - Existing grouped data remains available to PDF export and duplicate-generation reporting.
 - Completion storage uses stable plan-scoped physical cube identifiers. Existing grouped completion data will not be treated as a physical cube completion unless a safe migration path exists.
+- The cube-generation path exposes exact-result verification and rejects approximate fallback results.
 
 ## Error and edge handling
 
@@ -89,6 +107,7 @@ The sheet will not render instructions for every cube at once. The selected cube
 - Do not open the instruction sheet when the plan has no matching cube.
 - Keep the mosaic usable when the generated plan is large. Do not render expensive per-sticker React buttons.
 - Keep generation and preview loading overlays functional while selection state changes.
+- Do not show a move sequence when verification does not reproduce the requested target face.
 - If local storage is unavailable, completion tracking remains a non-blocking convenience.
 
 ## Verification
@@ -99,8 +118,15 @@ Add or update component tests for:
 - selecting a cube from the list;
 - synchronizing selection with cube lookup;
 - opening the focused instruction sheet for the selected physical cube;
+- showing the complete move sequence while highlighting the current step;
 - physical-cube completion state;
 - accessible labels and keyboard activation for cube regions.
+
+Add core tests for:
+
+- selecting the shortest exact candidate among the bounded candidate set;
+- rejecting a candidate that does not reproduce all nine target stickers;
+- preserving legal, exact output when move optimization cannot find a shorter candidate.
 
 Verify the following before the implementation commit:
 
