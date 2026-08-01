@@ -23,4 +23,11 @@ describe('StickerGridPreview', () => {
   it('includes sticker gaps in the scrollable overlay width', () => {
     expect(previewWidthFor(1, 12)).toBe('max(100%, 40px)')
   })
+
+  it('uses the same gap for the sticker grid and cube selection overlay', () => {
+    const { container } = render(<StickerGridPreview grid={face} cols={1} rows={1} onSelectCube={() => undefined} />)
+
+    expect(container.querySelector('.sticker-preview')).toHaveStyle('gap: 2px')
+    expect(container.querySelector('.cube-selection-overlay')).toHaveStyle('gap: 2px')
+  })
 })

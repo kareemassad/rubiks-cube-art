@@ -2,10 +2,11 @@ import { memo } from 'react'
 import { COLOR_HEX } from '../core/cube'
 import type { StickerGrid } from '../types'
 
+const STICKER_GAP = 2
+
 export function previewWidthFor(cols: number, stickerSize: number): string {
   const stickerColumns = cols * 3
-  const stickerGap = 2
-  return `max(100%, ${stickerColumns * stickerSize + Math.max(0, stickerColumns - 1) * stickerGap}px)`
+  return `max(100%, ${stickerColumns * stickerSize + Math.max(0, stickerColumns - 1) * STICKER_GAP}px)`
 }
 
 function StickerGridPreviewComponent({
@@ -36,7 +37,10 @@ function StickerGridPreviewComponent({
       <div className="sticker-preview-canvas" style={{ width: previewWidth }}>
         <div
           className="sticker-preview"
-          style={{ gridTemplateColumns: `repeat(${stickerColumns}, minmax(${stickerSize}px, 1fr))` }}
+          style={{
+            gap: STICKER_GAP,
+            gridTemplateColumns: `repeat(${stickerColumns}, minmax(${stickerSize}px, 1fr))`,
+          }}
           aria-label={label}
         >
           {grid.flatMap((row, rowIndex) =>
@@ -54,6 +58,7 @@ function StickerGridPreviewComponent({
           <div
             className="cube-selection-overlay"
             style={{
+              gap: STICKER_GAP,
               gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
               gridTemplateRows: `repeat(${cubeRows}, minmax(0, 1fr))`,
             }}

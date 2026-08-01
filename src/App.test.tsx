@@ -5,7 +5,7 @@ vi.mock('./core/workers/generateClient', () => ({ generateMosaicPlan: vi.fn() })
 vi.mock('./core/workers/previewClient', () => ({ quantizeImagePreview: vi.fn() }))
 vi.mock('./components/Cube3D', () => ({ Cube3D: () => <div data-testid="cube-3d" /> }))
 
-import App, { InstructionPlayer, MoveChips } from './App'
+import App, { InstructionPlayer, MoveChips, toggleCompletedCubeIds } from './App'
 import { solvedState } from './core/cube'
 import { generateMosaicPlan } from './core/workers/generateClient'
 import { quantizeImagePreview } from './core/workers/previewClient'
@@ -45,6 +45,14 @@ describe('App', () => {
     expect(screen.getByText('U').closest('li')).toHaveClass('played')
     expect(screen.getByText("F'").closest('li')).toHaveClass('played')
     expect(document.querySelector('[aria-current="step"]')).toBeNull()
+  })
+
+  it('computes completion changes without mutating the current set', () => {
+    const current = new Set(['cube-0'])
+
+    expect(toggleCompletedCubeIds(current, 'cube-1')).toEqual(new Set(['cube-0', 'cube-1']))
+    expect(toggleCompletedCubeIds(current, 'cube-0')).toEqual(new Set())
+    expect(current).toEqual(new Set(['cube-0']))
   })
 
   it('renders the generator controls and empty preview state', () => {

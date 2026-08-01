@@ -96,6 +96,16 @@ const HERO_SAMPLE_STICKERS: readonly { id: string; color: RubikColor }[] = [
   { id: 'hero-blue-bottom-right', color: 'B' },
 ]
 
+export function toggleCompletedCubeIds(current: Set<string>, cubeId: string): Set<string> {
+  const next = new Set(current)
+  if (next.has(cubeId)) {
+    next.delete(cubeId)
+  } else {
+    next.add(cubeId)
+  }
+  return next
+}
+
 export function MoveChips({ moves, activeStep = -1 }: { moves: string[]; activeStep?: number }) {
   if (moves.length === 0) {
     return <p className="no-move">No twists. Use the solved face.</p>
@@ -468,19 +478,18 @@ export default function App() {
 
   const toggleComplete = useCallback((cubeIndex: number) => {
     const cubeId = `cube-${cubeIndex}`
-    setCompletedCubeIds((current) => {
-      const next = new Set(current)
-      if (next.has(cubeId)) {
-        next.delete(cubeId)
-        return next
-      }
+    const wasCompleted = completedCubeIds.has(cubeId)
+    setCompletedCubeIds((current) => toggleCompletedCubeIds(current, cubeId))
+    if (!wasCompleted) setCelebratingGroupId(cubeId)
+  }, [completedCubeIds])
 
-      next.add(cubeId)
-      setCelebratingGroupId(cubeId)
-      globalThis.setTimeout(() => setCelebratingGroupId((active) => (active === cubeId ? null : active)), 1200)
-      return next
-    })
-  }, [])
+  useEffect(() => {
+    if (!celebratingGroupId) return
+    const timeout = globalThis.setTimeout(() => {
+      setCelebratingGroupId((active) => (active === celebratingGroupId ? null : active))
+    }, 1200)
+    return () => globalThis.clearTimeout(timeout)
+  }, [celebratingGroupId])
 
   useEffect(() => {
     if (!planHash) return
