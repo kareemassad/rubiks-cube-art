@@ -167,11 +167,20 @@ describe('StickerGridPreview', () => {
     } as DOMRect)
 
     const button = screen.getByRole('button', { name: /select cube 1/i })
-    fireEvent.pointerMove(button, { clientX: 150, clientY: 50, pointerType: 'mouse' })
+    const focus = container.querySelector('.cube-selection-focus')
+    expect(focus).toHaveAttribute('data-visible', 'false')
+
+    fireEvent.pointerMove(button, { clientX: 50, clientY: 50, pointerType: 'mouse' })
 
     const hover = container.querySelector('.cube-selection-hover')
+    expect(hover).toHaveAttribute('data-visible', 'true')
+    expect(hover).toHaveTextContent('1')
+
+    fireEvent.pointerMove(button, { clientX: 150, clientY: 50, pointerType: 'mouse' })
+
     expect(hover).toBeInTheDocument()
     expect(hover).toHaveAttribute('data-visible', 'true')
+    expect(hover).toHaveTextContent('2')
     expect(hover).toHaveStyle('left: calc(1 * ((100% - 2px) / 2 + 2px))')
     expect(button).toHaveAccessibleName('Select cube 1. Use arrow keys to move.')
 

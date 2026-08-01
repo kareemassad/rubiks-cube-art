@@ -61,10 +61,12 @@ function StickerGridPreviewComponent({
   const previewWidth = previewWidthFor(cols, stickerSize)
   const isInteractive = Boolean(onSelectCube && rows)
   const [focusedCubeIndex, setFocusedCubeIndex] = useState(0)
+  const [isFocusActive, setIsFocusActive] = useState(false)
   const stickerScrollRef = useRef<HTMLDivElement | null>(null)
   const overlayRef = useRef<HTMLDivElement | null>(null)
   const focusedCellRef = useRef<HTMLSpanElement | null>(null)
   const hoverCellRef = useRef<HTMLSpanElement | null>(null)
+  const hoverLabelRef = useRef<HTMLSpanElement | null>(null)
   const hoveredCubeIndexRef = useRef<number | null>(null)
   const shouldScrollFocusedCellRef = useRef(false)
 
@@ -78,8 +80,11 @@ function StickerGridPreviewComponent({
     const hoveredCubeIndex = hoveredCubeIndexRef.current
     if (!hoverCell || hoveredCubeIndex === null) return
 
-    hoverCell.dataset.visible = hoveredCubeIndex !== focusedCubeIndex && hoveredCubeIndex !== selectedCubeIndex ? 'true' : 'false'
-  }, [focusedCubeIndex, selectedCubeIndex])
+    hoverCell.dataset.visible = !(
+      hoveredCubeIndex === selectedCubeIndex ||
+      (isFocusActive && hoveredCubeIndex === focusedCubeIndex)
+    ) ? 'true' : 'false'
+  }, [focusedCubeIndex, isFocusActive, selectedCubeIndex])
 
   useEffect(() => {
     setFocusedCubeIndex((current) => Math.min(current, Math.max(0, totalCubes - 1)))
@@ -124,6 +129,7 @@ function StickerGridPreviewComponent({
   }
 
   function moveCubeFocus(cubeIndex: number, key: string, event: KeyboardEvent<HTMLButtonElement>) {
+    setIsFocusActive(true)
     const currentRow = Math.floor(cubeIndex / cols)
     const currentColumn = cubeIndex % cols
     let nextRow = currentRow
@@ -146,6 +152,7 @@ function StickerGridPreviewComponent({
   }
 
   function selectCube(cubeIndex: number) {
+    setIsFocusActive(true)
     shouldScrollFocusedCellRef.current = true
     setFocusedCubeIndex(cubeIndex)
     onSelectCube?.(cubeIndex)
@@ -165,12 +172,17 @@ function StickerGridPreviewComponent({
 
     hoveredCubeIndexRef.current = cubeIndex
     Object.assign(hoverCell.style, cubeHighlightStyle(cubeIndex, cubeRows, cols))
-    hoverCell.dataset.visible = cubeIndex !== focusedCubeIndex && cubeIndex !== selectedCubeIndex ? 'true' : 'false'
+    if (hoverLabelRef.current) hoverLabelRef.current.textContent = String(cubeIndex + 1)
+    hoverCell.dataset.visible = !(
+      cubeIndex === selectedCubeIndex ||
+      (isFocusActive && cubeIndex === focusedCubeIndex)
+    ) ? 'true' : 'false'
   }
 
   function handlePointerLeave() {
     hoveredCubeIndexRef.current = null
     if (hoverCellRef.current) hoverCellRef.current.dataset.visible = 'false'
+    if (hoverLabelRef.current) hoverLabelRef.current.textContent = ''
   }
 
   return (
@@ -209,11 +221,19 @@ function StickerGridPreviewComponent({
               aria-pressed={selectedCubeIndex === focusedCubeIndex}
               title={`Cube ${focusedCubeIndex + 1}`}
               onClick={handleOverlayClick}
+              onFocus={() => setIsFocusActive(true)}
+              onBlur={() => setIsFocusActive(false)}
               onKeyDown={(event) => moveCubeFocus(focusedCubeIndex, event.key, event)}
               onPointerMove={handlePointerMove}
               onPointerLeave={handlePointerLeave}
             >
-              <span ref={focusedCellRef} className="cube-selection-focus" style={cubeHighlightStyle(focusedCubeIndex, cubeRows, cols)} aria-hidden="true">
+              <span
+                ref={focusedCellRef}
+                className="cube-selection-focus"
+                data-visible={isFocusActive || selectedCubeIndex === focusedCubeIndex ? 'true' : 'false'}
+                style={cubeHighlightStyle(focusedCubeIndex, cubeRows, cols)}
+                aria-hidden="true"
+              >
                 <span className="cube-selection-label">{focusedCubeIndex + 1}</span>
               </span>
               {selectedCubeIndex !== null && selectedCubeIndex !== focusedCubeIndex ? (
@@ -221,7 +241,9 @@ function StickerGridPreviewComponent({
                   <span className="cube-selection-label">{selectedCubeIndex + 1}</span>
                 </span>
               ) : null}
-              <span ref={hoverCellRef} className="cube-selection-hover" data-visible="false" aria-hidden="true" />
+              <span ref={hoverCellRef} className="cube-selection-hover" data-visible="false" aria-hidden="true">
+                <span ref={hoverLabelRef} className="cube-selection-label" />
+              </span>
             </button>
           </div>
         ) : null}
