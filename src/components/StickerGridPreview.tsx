@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef, useState } from 'react'
-import type { KeyboardEvent, MouseEvent, PointerEvent } from 'react'
+import type { KeyboardEvent, MouseEvent } from 'react'
 import { COLOR_HEX } from '../core/cube'
 import type { StickerGrid } from '../types'
 
@@ -61,7 +61,6 @@ function StickerGridPreviewComponent({
   const previewWidth = previewWidthFor(cols, stickerSize)
   const isInteractive = Boolean(onSelectCube && rows)
   const [focusedCubeIndex, setFocusedCubeIndex] = useState(0)
-  const [hoveredCubeIndex, setHoveredCubeIndex] = useState<number | null>(null)
   const stickerScrollRef = useRef<HTMLDivElement | null>(null)
   const overlayRef = useRef<HTMLDivElement | null>(null)
 
@@ -135,11 +134,6 @@ function StickerGridPreviewComponent({
     selectCube(cubeIndex)
   }
 
-  function handlePointerMove(event: PointerEvent<HTMLButtonElement>) {
-    const cubeIndex = cubeIndexAtPoint(event.clientX, event.clientY)
-    setHoveredCubeIndex((current) => (current === cubeIndex ? current : cubeIndex))
-  }
-
   return (
     <div ref={stickerScrollRef} className="sticker-scroll">
       <div className="sticker-preview-canvas" style={{ width: previewWidth }}>
@@ -177,8 +171,6 @@ function StickerGridPreviewComponent({
               title={`Cube ${focusedCubeIndex + 1}`}
               onClick={handleOverlayClick}
               onKeyDown={(event) => moveCubeFocus(focusedCubeIndex, event.key, event)}
-              onPointerMove={handlePointerMove}
-              onPointerLeave={() => setHoveredCubeIndex(null)}
             >
               <span className="cube-selection-focus" style={cubeHighlightStyle(focusedCubeIndex, cubeRows, cols)} aria-hidden="true">
                 <span className="cube-selection-label">{focusedCubeIndex + 1}</span>
@@ -187,9 +179,6 @@ function StickerGridPreviewComponent({
                 <span className="cube-selection-selected" style={cubeHighlightStyle(selectedCubeIndex, cubeRows, cols)} aria-hidden="true">
                   <span className="cube-selection-label">{selectedCubeIndex + 1}</span>
                 </span>
-              ) : null}
-              {hoveredCubeIndex !== null && hoveredCubeIndex !== focusedCubeIndex && hoveredCubeIndex !== selectedCubeIndex ? (
-                <span className="cube-selection-hover" style={cubeHighlightStyle(hoveredCubeIndex, cubeRows, cols)} aria-hidden="true" />
               ) : null}
             </button>
           </div>
