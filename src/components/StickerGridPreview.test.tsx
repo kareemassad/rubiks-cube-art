@@ -58,14 +58,7 @@ describe('StickerGridPreview', () => {
     expect(previewWidthFor(1, 12)).toBe('max(100%, 40px)')
   })
 
-  it('uses the same gap for the sticker grid and cube selection overlay', () => {
-    const { container } = render(<StickerGridPreview grid={face} cols={1} rows={1} onSelectCube={() => undefined} />)
-
-    expect(container.querySelector('.sticker-preview')).toHaveStyle('gap: 2px')
-    expect(container.querySelector('.cube-selection-overlay')).toHaveStyle('gap: 2px')
-  })
-
-  it('uses cube-sized tracks for the selection overlay', () => {
+  it('uses gap-aware highlight geometry for the selection overlay', () => {
     const { container } = render(
       <StickerGridPreview
         grid={[
@@ -79,9 +72,51 @@ describe('StickerGridPreview', () => {
       />,
     )
 
-    expect(container.querySelector('.cube-selection-overlay')).toHaveStyle({
-      gridTemplateColumns: 'repeat(2, minmax(40px, 1fr))',
-      gridTemplateRows: 'repeat(1, minmax(40px, 1fr))',
+    expect(container.querySelector('.sticker-preview')).toHaveStyle('gap: 2px')
+    expect(container.querySelector('.cube-selection-focus')).toHaveStyle({
+      width: 'calc((100% - 2px) / 2)',
+      height: 'calc((100% - 0px) / 1)',
     })
+  })
+
+  it('scrolls a keyboard-selected cube into the horizontal viewport', () => {
+    const grid: StickerGrid = [
+      ['W', 'W', 'W', 'W', 'W', 'W', 'W', 'W', 'W'],
+      ['W', 'W', 'W', 'W', 'W', 'W', 'W', 'W', 'W'],
+      ['W', 'W', 'W', 'W', 'W', 'W', 'W', 'W', 'W'],
+    ]
+    render(<StickerGridPreview grid={grid} cols={3} rows={1} onSelectCube={() => undefined} />)
+
+    const scroll = document.querySelector('.sticker-scroll') as HTMLDivElement
+    const overlay = document.querySelector('.cube-selection-overlay') as HTMLDivElement
+    Object.defineProperty(scroll, 'scrollLeft', { configurable: true, writable: true, value: 0 })
+    vi.spyOn(scroll, 'getBoundingClientRect').mockReturnValue({
+      bottom: 100,
+      height: 100,
+      left: 0,
+      right: 100,
+      top: 0,
+      width: 100,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    } as DOMRect)
+    vi.spyOn(overlay, 'getBoundingClientRect').mockReturnValue({
+      bottom: 40,
+      height: 40,
+      left: 0,
+      right: 300,
+      top: 0,
+      width: 300,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    } as DOMRect)
+
+    const button = screen.getByRole('button', { name: /select cube 1/i })
+    button.focus()
+    fireEvent.keyDown(button, { key: 'ArrowRight' })
+
+    expect(scroll.scrollLeft).toBeGreaterThan(0)
   })
 })

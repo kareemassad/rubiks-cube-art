@@ -42,7 +42,7 @@ export function chooseLayoutForCubeCount(count: number, imageAspectRatio: number
   const target = clampCubeDimension(count, MAX_GENERATION_CUBES)
   let best = { rows: 1, cols: target }
   let bestScore = Number.POSITIVE_INFINITY
-  const targetAspect = Math.max(0.01, imageAspectRatio)
+  const targetAspect = Math.max(1 / target, Number.isFinite(imageAspectRatio) ? imageAspectRatio : 1)
 
   for (let rows = 1; rows <= target; rows++) {
     if (target % rows !== 0) continue

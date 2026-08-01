@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('./core/workers/generateClient', () => ({ generateMosaicPlan: vi.fn() }))
 vi.mock('./core/workers/previewClient', () => ({ quantizeImagePreview: vi.fn() }))
@@ -10,6 +10,16 @@ import { solvedState } from './core/cube'
 import { generateMosaicPlan } from './core/workers/generateClient'
 import { quantizeImagePreview } from './core/workers/previewClient'
 import type { GeneratedCube, MosaicPlan, StickerGrid, TargetFace } from './types'
+
+const originalCreateObjectURL = URL.createObjectURL
+const originalRevokeObjectURL = URL.revokeObjectURL
+
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+  Object.defineProperty(URL, 'createObjectURL', { configurable: true, writable: true, value: originalCreateObjectURL })
+  Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, writable: true, value: originalRevokeObjectURL })
+})
 
 const instructionFace: TargetFace = [
   ['W', 'W', 'W'],
@@ -125,10 +135,7 @@ describe('App', () => {
     previewMock.mockResolvedValue(grid)
     generateMock.mockResolvedValue(generatedPlan)
 
-    Object.defineProperty(window, 'createImageBitmap', {
-      configurable: true,
-      value: vi.fn(async () => ({ width: 3, height: 3 }) as unknown as ImageBitmap),
-    })
+    vi.stubGlobal('createImageBitmap', vi.fn(async () => ({ width: 3, height: 3 }) as unknown as ImageBitmap))
     Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:test') })
     Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() })
 

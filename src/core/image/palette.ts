@@ -8,6 +8,7 @@ export type QuantizeOptions = {
 }
 
 export const MAX_PREVIEW_SOURCE_DIMENSION = 1600
+export const MAX_GENERATION_SOURCE_DIMENSION = 2400
 
 const RUBIK_PALETTE: Readonly<Record<RubikColor, Rgb>> = {
   W: { r: 248, g: 250, b: 252 },

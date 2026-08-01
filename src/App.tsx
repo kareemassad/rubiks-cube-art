@@ -5,7 +5,7 @@ import { buildOutputStickerGrid, groupGeneratedCubes, suggestLayouts } from './c
 import { generateMosaicPlan } from './core/workers/generateClient'
 import { quantizeImagePreview } from './core/workers/previewClient'
 import { hashMosaicPlan } from './core/mosaic/planIdentity'
-import { MAX_PREVIEW_SOURCE_DIMENSION } from './core/image/palette'
+import { MAX_GENERATION_SOURCE_DIMENSION, MAX_PREVIEW_SOURCE_DIMENSION } from './core/image/palette'
 import {
   migrateCompletedGroupIds,
   readCompletedGroups,
@@ -434,12 +434,13 @@ export default function App() {
       const sourceWidth = 'naturalWidth' in loadedImage.bitmap ? loadedImage.bitmap.naturalWidth : loadedImage.bitmap.width
       const sourceHeight = 'naturalHeight' in loadedImage.bitmap ? loadedImage.bitmap.naturalHeight : loadedImage.bitmap.height
       const sourceDimension = Math.max(sourceWidth, sourceHeight)
+      const generationSourceDimension = Math.min(sourceDimension, MAX_GENERATION_SOURCE_DIMENSION)
       let generationGrid = quantizedPreview.grid
       if (sourceDimension > MAX_PREVIEW_SOURCE_DIMENSION) {
-        setStatus('Matching full-resolution source colors…')
+        setStatus('Matching high-resolution source colors…')
         generationGrid = await quantizeImagePreview(loadedImage.bitmap, rows, cols, {
           cropToWall,
-          maxSourceDimension: sourceDimension,
+          maxSourceDimension: generationSourceDimension,
         })
       }
 

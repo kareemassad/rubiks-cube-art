@@ -45,6 +45,10 @@ describe('layout limits', () => {
     expect(chooseLayoutForCubeCount(3000, 2)).toEqual({ rows: 40, cols: 50 })
   })
 
+  it('keeps extreme portrait aspects eligible for the narrowest exact layout', () => {
+    expect(chooseLayoutForCubeCount(2000, 0.0001)).toEqual({ rows: 2000, cols: 1 })
+  })
+
   it('keeps the target cube count when the image is portrait', () => {
     const layout = chooseLayoutForCubeCount(4, 0.6)
 

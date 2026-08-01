@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { cropToAspect, findContentCropBox, previewSourceSize } from '../image/palette'
+import {
+  cropToAspect,
+  findContentCropBox,
+  MAX_GENERATION_SOURCE_DIMENSION,
+  previewSourceSize,
+} from '../image/palette'
 
 describe('image crop detection', () => {
   it('crops mostly-white borders around visible content', () => {
@@ -42,8 +47,8 @@ describe('preview source sizing', () => {
     expect(previewSourceSize(10000, 100, 6000, 3).width).toBeGreaterThanOrEqual(6000)
   })
 
-  it('can preserve the original source size for final generation', () => {
-    expect(previewSourceSize(4000, 2000, 1, 1, Number.POSITIVE_INFINITY)).toEqual({ width: 4000, height: 2000 })
+  it('keeps final generation within the safe source cap', () => {
+    expect(previewSourceSize(4000, 2000, 1, 1, MAX_GENERATION_SOURCE_DIMENSION)).toEqual({ width: 2400, height: 1200 })
   })
 })
 

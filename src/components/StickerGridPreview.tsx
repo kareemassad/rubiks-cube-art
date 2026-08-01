@@ -23,6 +23,21 @@ function cubeHighlightStyle(cubeIndex: number, cubeRows: number, cols: number) {
   }
 }
 
+function cubeCellBoundsFor(cubeIndex: number, cubeRows: number, cols: number, rect: DOMRect) {
+  const width = Math.max(1, rect.width)
+  const height = Math.max(1, rect.height)
+  const cubeWidth = (width - STICKER_GAP * Math.max(0, cols - 1)) / cols
+  const cubeHeight = (height - STICKER_GAP * Math.max(0, cubeRows - 1)) / cubeRows
+  const row = Math.floor(cubeIndex / cols)
+  const column = cubeIndex % cols
+  return {
+    left: rect.left + column * (cubeWidth + STICKER_GAP),
+    right: rect.left + column * (cubeWidth + STICKER_GAP) + cubeWidth,
+    top: rect.top + row * (cubeHeight + STICKER_GAP),
+    bottom: rect.top + row * (cubeHeight + STICKER_GAP) + cubeHeight,
+  }
+}
+
 function StickerGridPreviewComponent({
   grid,
   cols,
@@ -43,11 +58,11 @@ function StickerGridPreviewComponent({
   const totalCubes = cubeRows * cols
   const stickerSize = totalCubes >= 1200 ? 4 : totalCubes >= 400 ? 6 : totalCubes >= 120 ? 8 : 12
   const stickerColumns = cols * 3
-  const cubeTrackSize = stickerSize * 3 + STICKER_GAP * 2
   const previewWidth = previewWidthFor(cols, stickerSize)
   const isInteractive = Boolean(onSelectCube && rows)
   const [focusedCubeIndex, setFocusedCubeIndex] = useState(0)
   const [hoveredCubeIndex, setHoveredCubeIndex] = useState<number | null>(null)
+  const stickerScrollRef = useRef<HTMLDivElement | null>(null)
   const overlayRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -58,6 +73,21 @@ function StickerGridPreviewComponent({
   useEffect(() => {
     setFocusedCubeIndex((current) => Math.min(current, Math.max(0, totalCubes - 1)))
   }, [totalCubes])
+
+  useEffect(() => {
+    if (!isInteractive) return
+    const scroll = stickerScrollRef.current
+    const overlay = overlayRef.current
+    if (!scroll || !overlay) return
+
+    const cell = cubeCellBoundsFor(focusedCubeIndex, cubeRows, cols, overlay.getBoundingClientRect())
+    const viewport = scroll.getBoundingClientRect()
+    if (cell.left < viewport.left) {
+      scroll.scrollLeft -= viewport.left - cell.left
+    } else if (cell.right > viewport.right) {
+      scroll.scrollLeft += cell.right - viewport.right
+    }
+  }, [cols, cubeRows, focusedCubeIndex, isInteractive])
 
   function cubeIndexAtPoint(clientX: number, clientY: number): number {
     const overlay = overlayRef.current
@@ -111,7 +141,7 @@ function StickerGridPreviewComponent({
   }
 
   return (
-    <div className="sticker-scroll">
+    <div ref={stickerScrollRef} className="sticker-scroll">
       <div className="sticker-preview-canvas" style={{ width: previewWidth }}>
         <div
           className="sticker-preview"
@@ -136,11 +166,6 @@ function StickerGridPreviewComponent({
           <div
             ref={overlayRef}
             className="cube-selection-overlay"
-            style={{
-              gap: STICKER_GAP,
-              gridTemplateColumns: `repeat(${cols}, minmax(${cubeTrackSize}px, 1fr))`,
-              gridTemplateRows: `repeat(${cubeRows}, minmax(${cubeTrackSize}px, 1fr))`,
-            }}
             aria-label="Select a cube from the mosaic. Use arrow keys to move."
           >
             <button

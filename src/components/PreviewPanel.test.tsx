@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getSelectionScrollBehavior, PreviewPanel } from './PreviewPanel'
 import type { GeneratedCube, GeneratedCubeGroup, MosaicPlan, TargetFace } from '../types'
 
@@ -8,6 +8,11 @@ const pdfExportMock = vi.fn(() => <a href="/test.pdf">Export PDF</a>)
 vi.mock('./PdfExport', () => ({
   PdfExport: pdfExportMock,
 }))
+
+afterEach(() => {
+  vi.clearAllMocks()
+  vi.unstubAllGlobals()
+})
 
 const face: TargetFace = [
   ['W', 'W', 'W'],
@@ -44,8 +49,12 @@ describe('PreviewPanel', () => {
     vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true })))
 
     expect(getSelectionScrollBehavior()).toBe('auto')
+  })
 
-    vi.unstubAllGlobals()
+  it('uses smooth scrolling when reduced motion is not requested', () => {
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false })))
+
+    expect(getSelectionScrollBehavior()).toBe('smooth')
   })
 
   it('does not load the PDF export module until the user asks for export', () => {
