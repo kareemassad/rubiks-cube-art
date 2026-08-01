@@ -647,7 +647,7 @@ input[type='range'] {
 .cube-card {
   position: relative;
   content-visibility: auto;
-  contain-intrinsic-size: auto 300px;
+  contain-intrinsic-size: auto 220px;
   min-height: 164px;
   display: grid;
   place-items: center;

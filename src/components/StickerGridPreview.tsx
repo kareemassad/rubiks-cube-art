@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import { COLOR_HEX } from '../core/cube'
 import type { StickerGrid } from '../types'
 
@@ -32,6 +32,44 @@ function StickerGridPreviewComponent({
   const cubeTrackSize = stickerSize * 3 + STICKER_GAP * 2
   const previewWidth = previewWidthFor(cols, stickerSize)
   const isInteractive = Boolean(onSelectCube && rows)
+  const [focusedCubeIndex, setFocusedCubeIndex] = useState(0)
+  const cubeButtonRefs = useRef<Array<HTMLButtonElement | null>>([])
+
+  useEffect(() => {
+    if (selectedCubeIndex === null || selectedCubeIndex >= totalCubes) return
+    setFocusedCubeIndex(selectedCubeIndex)
+  }, [selectedCubeIndex, totalCubes])
+
+  useEffect(() => {
+    setFocusedCubeIndex((current) => Math.min(current, Math.max(0, totalCubes - 1)))
+  }, [totalCubes])
+
+  function moveCubeFocus(cubeIndex: number, key: string, event: React.KeyboardEvent<HTMLButtonElement>) {
+    const currentRow = Math.floor(cubeIndex / cols)
+    const currentColumn = cubeIndex % cols
+    let nextRow = currentRow
+    let nextColumn = currentColumn
+
+    if (key === 'ArrowUp') nextRow -= 1
+    if (key === 'ArrowDown') nextRow += 1
+    if (key === 'ArrowLeft') nextColumn -= 1
+    if (key === 'ArrowRight') nextColumn += 1
+    if (key === 'Home') nextColumn = 0
+    if (key === 'End') nextColumn = cols - 1
+
+    if (nextRow < 0 || nextRow >= cubeRows || nextColumn < 0 || nextColumn >= cols) return
+
+    const nextIndex = nextRow * cols + nextColumn
+    if (nextIndex === cubeIndex || nextIndex >= totalCubes) return
+    event.preventDefault()
+    setFocusedCubeIndex(nextIndex)
+    cubeButtonRefs.current[nextIndex]?.focus()
+  }
+
+  function selectCube(cubeIndex: number) {
+    setFocusedCubeIndex(cubeIndex)
+    onSelectCube?.(cubeIndex)
+  }
 
   return (
     <div className="sticker-scroll">
@@ -63,17 +101,22 @@ function StickerGridPreviewComponent({
               gridTemplateColumns: `repeat(${cols}, minmax(${cubeTrackSize}px, 1fr))`,
               gridTemplateRows: `repeat(${cubeRows}, minmax(${cubeTrackSize}px, 1fr))`,
             }}
-            aria-label="Select a cube from the mosaic"
+            aria-label="Select a cube from the mosaic. Use arrow keys to move."
           >
             {Array.from({ length: cubeRows * cols }, (_, cubeIndex) => (
               <button
                 key={cubeIndex}
                 type="button"
                 className={selectedCubeIndex === cubeIndex ? 'cube-selection-button selected' : 'cube-selection-button'}
+                ref={(element) => {
+                  cubeButtonRefs.current[cubeIndex] = element
+                }}
+                tabIndex={cubeIndex === focusedCubeIndex ? 0 : -1}
                 aria-label={`Select cube ${cubeIndex + 1}`}
                 aria-pressed={selectedCubeIndex === cubeIndex}
                 title={`Cube ${cubeIndex + 1}`}
-                onClick={() => onSelectCube?.(cubeIndex)}
+                onClick={() => selectCube(cubeIndex)}
+                onKeyDown={(event) => moveCubeFocus(cubeIndex, event.key, event)}
               >
                 <span>{cubeIndex + 1}</span>
               </button>

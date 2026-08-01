@@ -21,6 +21,7 @@ import {
   clampCubeDimension,
   clampRowsForColumns,
   cubeCount,
+  layoutShapeMessage,
   layoutLimitMessage,
   MAX_GENERATION_CUBES,
   RECOMMENDED_CUBE_COUNT,
@@ -326,6 +327,7 @@ export default function App() {
   const outputGrid = useMemo(() => (plan ? buildOutputStickerGrid(plan) : null), [plan])
   const planHash = useMemo(() => (plan ? hashMosaicPlan(plan) : null), [plan])
   const totalCubes = cubeCount(rows, cols)
+  const layoutMessage = layoutShapeMessage(cubesToUse, { rows, cols })
   const limitMessage = layoutLimitMessage(rows, cols)
   const maxRows = maxRowsForColumns(cols)
   const maxCols = maxColumnsForRows(rows)
@@ -536,6 +538,7 @@ export default function App() {
           suggestedLayouts={suggestedLayouts}
           selectedPreset={selectedPreset}
           limitMessage={limitMessage}
+          layoutMessage={layoutMessage}
           totalCubes={totalCubes}
           status={status}
           isLayoutPending={isLayoutPending}

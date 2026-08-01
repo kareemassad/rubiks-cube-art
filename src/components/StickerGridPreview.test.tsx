@@ -20,6 +20,24 @@ describe('StickerGridPreview', () => {
     expect(onSelectCube).toHaveBeenCalledWith(0)
   })
 
+  it('keeps one cube tabbable and moves focus with arrow keys', () => {
+    const onSelectCube = vi.fn()
+    const grid: StickerGrid = Array.from({ length: 6 }, () => Array.from({ length: 6 }, () => 'W'))
+    render(<StickerGridPreview grid={grid} cols={2} rows={2} onSelectCube={onSelectCube} />)
+
+    const buttons = screen.getAllByRole('button')
+    expect(buttons[0]).toHaveAttribute('tabindex', '0')
+    expect(buttons.slice(1).every((button) => button.getAttribute('tabindex') === '-1')).toBe(true)
+
+    buttons[0].focus()
+    fireEvent.keyDown(buttons[0], { key: 'ArrowRight' })
+
+    expect(buttons[1]).toHaveFocus()
+    expect(buttons[1]).toHaveAttribute('tabindex', '0')
+    expect(buttons[0]).toHaveAttribute('tabindex', '-1')
+    expect(onSelectCube).not.toHaveBeenCalled()
+  })
+
   it('includes sticker gaps in the scrollable overlay width', () => {
     expect(previewWidthFor(1, 12)).toBe('max(100%, 40px)')
   })

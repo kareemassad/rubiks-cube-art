@@ -24,6 +24,7 @@ export function ControlPanel({
   suggestedLayouts,
   selectedPreset,
   limitMessage,
+  layoutMessage,
   totalCubes,
   status,
   isLayoutPending,
@@ -48,6 +49,7 @@ export function ControlPanel({
   suggestedLayouts: LayoutPreset[]
   selectedPreset: string | null
   limitMessage: string | null
+  layoutMessage: string | null
   totalCubes: number
   status: string
   isLayoutPending: boolean
@@ -166,10 +168,10 @@ export function ControlPanel({
         </label>
       )}
 
-      <div className={limitMessage ? 'limit-note warning' : 'limit-note'}>
+      <div className={limitMessage || layoutMessage ? 'limit-note warning' : 'limit-note'}>
         <strong>{totalCubes} cubes</strong>
         <span>
-          {limitMessage ??
+          {limitMessage ?? layoutMessage ??
             `${totalCubes * 9} stickers. Max ${MAX_GENERATION_CUBES} cubes; long mosaics scroll.`}
         </span>
       </div>

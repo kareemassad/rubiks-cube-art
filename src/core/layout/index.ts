@@ -58,6 +58,12 @@ export function chooseLayoutForCubeCount(count: number, imageAspectRatio: number
   return best
 }
 
+export function layoutShapeMessage(count: number, layout: { rows: number; cols: number }): string | null {
+  const target = clampCubeDimension(count, MAX_GENERATION_CUBES)
+  if (target <= 4 || (layout.rows > 1 && layout.cols > 1)) return null
+  return `An exact ${target}-cube layout needs a single row or column. Use a nearby cube count for a more compact wall.`
+}
+
 export const chooseAutoLayout = chooseLayoutForCubeCount
 
 export function layoutLimitMessage(rows: number, cols: number): string | null {

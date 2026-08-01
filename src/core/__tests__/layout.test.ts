@@ -5,6 +5,7 @@ import {
   clampColumnsForRows,
   clampCubeDimension,
   clampRowsForColumns,
+  layoutShapeMessage,
   layoutLimitMessage,
   MAX_GENERATION_CUBES,
   maxColumnsForRows,
@@ -49,5 +50,10 @@ describe('layout limits', () => {
 
     expect(layout).toEqual({ rows: 2, cols: 2 })
     expect(layout.rows * layout.cols).toBe(4)
+  })
+
+  it('explains when an exact count requires a single-row or single-column wall', () => {
+    expect(layoutShapeMessage(13, { rows: 1, cols: 13 })).toContain('exact 13-cube layout')
+    expect(layoutShapeMessage(30, { rows: 5, cols: 6 })).toBeNull()
   })
 })
