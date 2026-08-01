@@ -5,6 +5,7 @@ import { buildOutputStickerGrid, groupGeneratedCubes, suggestLayouts } from './c
 import { generateMosaicPlan } from './core/workers/generateClient'
 import { quantizeImagePreview } from './core/workers/previewClient'
 import { hashMosaicPlan } from './core/mosaic/planIdentity'
+import { MAX_PREVIEW_SOURCE_DIMENSION } from './core/image/palette'
 import {
   migrateCompletedGroupIds,
   readCompletedGroups,
@@ -180,6 +181,8 @@ export function InstructionPlayer({
   const [step, setStep] = useState(0)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const modalRef = useRef<HTMLElement>(null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
   const visibleMoves = cube.buildMoves.slice(0, step)
   const state = applyMoves(solvedState(), visibleMoves)
   const nextMove = cube.buildMoves[step]
@@ -204,7 +207,7 @@ export function InstructionPlayer({
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         event.preventDefault()
-        onClose()
+        onCloseRef.current()
         return
       }
 
@@ -241,7 +244,7 @@ export function InstructionPlayer({
       document.removeEventListener('focusin', handleFocusIn)
       previousFocus?.focus()
     }
-  }, [onClose])
+  }, [])
 
   return (
     <div
@@ -428,7 +431,19 @@ export default function App() {
     setProgress({ completed: 0, total: totalCubes, cacheHits: 0, exact: 0 })
     setStatus(`Generating ${totalCubes} exact build instructions…`)
     try {
-      const nextPlan = await generateMosaicPlan(quantizedPreview.grid, {
+      const sourceWidth = 'naturalWidth' in loadedImage.bitmap ? loadedImage.bitmap.naturalWidth : loadedImage.bitmap.width
+      const sourceHeight = 'naturalHeight' in loadedImage.bitmap ? loadedImage.bitmap.naturalHeight : loadedImage.bitmap.height
+      const sourceDimension = Math.max(sourceWidth, sourceHeight)
+      let generationGrid = quantizedPreview.grid
+      if (sourceDimension > MAX_PREVIEW_SOURCE_DIMENSION) {
+        setStatus('Matching full-resolution source colors…')
+        generationGrid = await quantizeImagePreview(loadedImage.bitmap, rows, cols, {
+          cropToWall,
+          maxSourceDimension: sourceDimension,
+        })
+      }
+
+      const nextPlan = await generateMosaicPlan(generationGrid, {
         rows,
         cols,
         onProgress: setProgress,

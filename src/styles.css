@@ -493,15 +493,15 @@ input[type='range'] {
 .cube-selection-overlay {
   position: absolute;
   inset: 0;
-  display: grid;
-  gap: 2px;
   pointer-events: none;
 }
 
 .cube-selection-button {
-  position: relative;
-  min-width: 0;
-  border: 3px solid transparent;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
   background: transparent;
   padding: 0;
   cursor: pointer;
@@ -509,21 +509,43 @@ input[type='range'] {
 }
 
 .cube-selection-button:focus-visible {
-  border-color: rgba(255, 213, 0, 0.9);
   outline: none;
-  background: rgba(255, 213, 0, 0.12);
 }
 
-.cube-selection-button.selected {
+.cube-selection-focus,
+.cube-selection-selected,
+.cube-selection-hover {
+  position: absolute;
+  display: grid;
+  place-items: end;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.cube-selection-focus {
+  border: 3px solid transparent;
+}
+
+.cube-selection-button:focus-visible .cube-selection-focus,
+.cube-selection-button.selected .cube-selection-focus {
   border-color: #ffd500;
   background: rgba(255, 213, 0, 0.16);
   box-shadow: inset 0 0 0 2px #111827, 0 0 0 2px #ffd500;
 }
 
-.cube-selection-button span {
-  position: absolute;
-  right: 5px;
-  bottom: 5px;
+.cube-selection-selected {
+  border: 3px solid #ffd500;
+  background: rgba(255, 213, 0, 0.16);
+  box-shadow: inset 0 0 0 2px #111827, 0 0 0 2px #ffd500;
+}
+
+.cube-selection-hover {
+  border: 3px solid rgba(255, 213, 0, 0.9);
+  background: rgba(255, 213, 0, 0.12);
+}
+
+.cube-selection-label {
+  margin: 0 5px 5px 0;
   min-width: 24px;
   height: 24px;
   display: inline-grid;
@@ -534,26 +556,12 @@ input[type='range'] {
   color: #111827;
   font-size: 11px;
   font-weight: 900;
-  opacity: 0;
-  transform: scale(0.8);
-  transition: opacity 140ms ease, transform 140ms ease;
-}
-
-.cube-selection-button:focus-visible span,
-.cube-selection-button.selected span {
   opacity: 1;
-  transform: scale(1);
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .cube-selection-button:hover {
-    border-color: rgba(255, 213, 0, 0.9);
-    background: rgba(255, 213, 0, 0.12);
-  }
-
-  .cube-selection-button:hover span {
-    opacity: 1;
-    transform: scale(1);
+  .cube-selection-label {
+    transition: transform 140ms ease;
   }
 }
 
@@ -1209,9 +1217,8 @@ input[type='range'] {
     padding: 18px;
   }
 
-  .cube-selection-button span {
-    right: 2px;
-    bottom: 2px;
+  .cube-selection-label {
+    margin: 0 2px 2px 0;
     min-width: 20px;
     height: 20px;
     font-size: 10px;

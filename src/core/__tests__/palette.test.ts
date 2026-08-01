@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findContentCropBox, previewSourceSize } from '../image/palette'
+import { cropToAspect, findContentCropBox, previewSourceSize } from '../image/palette'
 
 describe('image crop detection', () => {
   it('crops mostly-white borders around visible content', () => {
@@ -40,5 +40,15 @@ describe('preview source sizing', () => {
   it('does not downscale below the requested output dimensions', () => {
     expect(previewSourceSize(4000, 2000, 3000, 1500)).toEqual({ width: 3000, height: 1500 })
     expect(previewSourceSize(10000, 100, 6000, 3).width).toBeGreaterThanOrEqual(6000)
+  })
+
+  it('can preserve the original source size for final generation', () => {
+    expect(previewSourceSize(4000, 2000, 1, 1, Number.POSITIVE_INFINITY)).toEqual({ width: 4000, height: 2000 })
+  })
+})
+
+describe('aspect crop bounds', () => {
+  it('keeps extreme target ratios at least one pixel high', () => {
+    expect(cropToAspect({ sx: 0, sy: 0, sw: 1, sh: 1 }, 2000, 1, 1)).toEqual({ sx: 0, sy: 0, sw: 1, sh: 1 })
   })
 })

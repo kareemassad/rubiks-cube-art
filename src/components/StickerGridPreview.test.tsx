@@ -20,22 +20,38 @@ describe('StickerGridPreview', () => {
     expect(onSelectCube).toHaveBeenCalledWith(0)
   })
 
-  it('keeps one cube tabbable and moves focus with arrow keys', () => {
+  it('uses one accessible picker control and maps pointer clicks to cube cells', () => {
     const onSelectCube = vi.fn()
     const grid: StickerGrid = Array.from({ length: 6 }, () => Array.from({ length: 6 }, () => 'W'))
     render(<StickerGridPreview grid={grid} cols={2} rows={2} onSelectCube={onSelectCube} />)
 
     const buttons = screen.getAllByRole('button')
+    expect(buttons).toHaveLength(1)
     expect(buttons[0]).toHaveAttribute('tabindex', '0')
-    expect(buttons.slice(1).every((button) => button.getAttribute('tabindex') === '-1')).toBe(true)
+    expect(buttons[0]).toHaveAccessibleName('Select cube 1. Use arrow keys to move.')
 
     buttons[0].focus()
     fireEvent.keyDown(buttons[0], { key: 'ArrowRight' })
 
-    expect(buttons[1]).toHaveFocus()
-    expect(buttons[1]).toHaveAttribute('tabindex', '0')
-    expect(buttons[0]).toHaveAttribute('tabindex', '-1')
+    expect(buttons[0]).toHaveFocus()
+    expect(buttons[0]).toHaveAccessibleName('Select cube 2. Use arrow keys to move.')
     expect(onSelectCube).not.toHaveBeenCalled()
+
+    const overlay = document.querySelector('.cube-selection-overlay') as HTMLDivElement
+    vi.spyOn(overlay, 'getBoundingClientRect').mockReturnValue({
+      bottom: 200,
+      height: 200,
+      left: 0,
+      right: 200,
+      top: 0,
+      width: 200,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    } as DOMRect)
+    fireEvent.click(buttons[0], { detail: 1, clientX: 150, clientY: 50 })
+
+    expect(onSelectCube).toHaveBeenCalledWith(1)
   })
 
   it('includes sticker gaps in the scrollable overlay width', () => {

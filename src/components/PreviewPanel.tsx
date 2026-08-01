@@ -7,6 +7,10 @@ import type { GeneratedCubeGroup, MosaicPlan, MosaicProgress, StickerGrid } from
 const LazyPdfExport = lazy(() => import('./PdfExport').then((module) => ({ default: module.PdfExport })))
 const CUBE_PAGE_SIZE = 96
 
+export function getSelectionScrollBehavior(): 'auto' | 'smooth' {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+}
+
 type QuantizedPreview = {
   grid: StickerGrid
   rows: number
@@ -61,7 +65,7 @@ export function PreviewPanel({
   useEffect(() => {
     if (selectedCubeIndex === null) return
     const card = document.getElementById(`cube-card-${selectedCubeIndex}`)
-    card?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
+    card?.scrollIntoView?.({ block: 'nearest', behavior: getSelectionScrollBehavior() })
   }, [selectedCubeIndex])
 
   function openCube(cubeIndex: number) {

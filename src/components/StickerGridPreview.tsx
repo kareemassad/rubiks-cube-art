@@ -1,4 +1,5 @@
-import { memo, useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
+import type { KeyboardEvent, MouseEvent, PointerEvent } from 'react'
 import { COLOR_HEX } from '../core/cube'
 import type { StickerGrid } from '../types'
 
@@ -7,6 +8,19 @@ const STICKER_GAP = 2
 export function previewWidthFor(cols: number, stickerSize: number): string {
   const stickerColumns = cols * 3
   return `max(100%, ${stickerColumns * stickerSize + Math.max(0, stickerColumns - 1) * STICKER_GAP}px)`
+}
+
+function cubeHighlightStyle(cubeIndex: number, cubeRows: number, cols: number) {
+  const row = Math.floor(cubeIndex / cols)
+  const column = cubeIndex % cols
+  const columnGaps = STICKER_GAP * Math.max(0, cols - 1)
+  const rowGaps = STICKER_GAP * Math.max(0, cubeRows - 1)
+  return {
+    left: `calc(${column} * ((100% - ${columnGaps}px) / ${cols} + ${STICKER_GAP}px))`,
+    top: `calc(${row} * ((100% - ${rowGaps}px) / ${cubeRows} + ${STICKER_GAP}px))`,
+    width: `calc((100% - ${columnGaps}px) / ${cols})`,
+    height: `calc((100% - ${rowGaps}px) / ${cubeRows})`,
+  }
 }
 
 function StickerGridPreviewComponent({
@@ -33,7 +47,8 @@ function StickerGridPreviewComponent({
   const previewWidth = previewWidthFor(cols, stickerSize)
   const isInteractive = Boolean(onSelectCube && rows)
   const [focusedCubeIndex, setFocusedCubeIndex] = useState(0)
-  const cubeButtonRefs = useRef<Array<HTMLButtonElement | null>>([])
+  const [hoveredCubeIndex, setHoveredCubeIndex] = useState<number | null>(null)
+  const overlayRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (selectedCubeIndex === null || selectedCubeIndex >= totalCubes) return
@@ -43,6 +58,21 @@ function StickerGridPreviewComponent({
   useEffect(() => {
     setFocusedCubeIndex((current) => Math.min(current, Math.max(0, totalCubes - 1)))
   }, [totalCubes])
+
+  function cubeIndexAtPoint(clientX: number, clientY: number): number {
+    const overlay = overlayRef.current
+    if (!overlay || totalCubes === 0) return focusedCubeIndex
+    const rect = overlay.getBoundingClientRect()
+    const width = Math.max(1, rect.width)
+    const height = Math.max(1, rect.height)
+    const cubeWidth = (width - STICKER_GAP * Math.max(0, cols - 1)) / cols
+    const cubeHeight = (height - STICKER_GAP * Math.max(0, cubeRows - 1)) / cubeRows
+    const x = Math.max(0, Math.min(width - 0.001, clientX - rect.left))
+    const y = Math.max(0, Math.min(height - 0.001, clientY - rect.top))
+    const column = Math.min(cols - 1, Math.floor(x / Math.max(1, cubeWidth + STICKER_GAP)))
+    const row = Math.min(cubeRows - 1, Math.floor(y / Math.max(1, cubeHeight + STICKER_GAP)))
+    return Math.min(totalCubes - 1, row * cols + column)
+  }
 
   function moveCubeFocus(cubeIndex: number, key: string, event: KeyboardEvent<HTMLButtonElement>) {
     const currentRow = Math.floor(cubeIndex / cols)
@@ -63,12 +93,21 @@ function StickerGridPreviewComponent({
     if (nextIndex === cubeIndex || nextIndex >= totalCubes) return
     event.preventDefault()
     setFocusedCubeIndex(nextIndex)
-    cubeButtonRefs.current[nextIndex]?.focus()
   }
 
   function selectCube(cubeIndex: number) {
     setFocusedCubeIndex(cubeIndex)
     onSelectCube?.(cubeIndex)
+  }
+
+  function handleOverlayClick(event: MouseEvent<HTMLButtonElement>) {
+    const cubeIndex = event.detail === 0 ? focusedCubeIndex : cubeIndexAtPoint(event.clientX, event.clientY)
+    selectCube(cubeIndex)
+  }
+
+  function handlePointerMove(event: PointerEvent<HTMLButtonElement>) {
+    const cubeIndex = cubeIndexAtPoint(event.clientX, event.clientY)
+    setHoveredCubeIndex((current) => (current === cubeIndex ? current : cubeIndex))
   }
 
   return (
@@ -95,6 +134,7 @@ function StickerGridPreviewComponent({
         </div>
         {isInteractive ? (
           <div
+            ref={overlayRef}
             className="cube-selection-overlay"
             style={{
               gap: STICKER_GAP,
@@ -103,25 +143,30 @@ function StickerGridPreviewComponent({
             }}
             aria-label="Select a cube from the mosaic. Use arrow keys to move."
           >
-            {Array.from({ length: cubeRows * cols }, (_, cubeIndex) => (
-              <button
-                key={cubeIndex}
-                type="button"
-                className={selectedCubeIndex === cubeIndex ? 'cube-selection-button selected' : 'cube-selection-button'}
-                ref={(element) => {
-                  cubeButtonRefs.current[cubeIndex] = element
-                }}
-                tabIndex={cubeIndex === focusedCubeIndex ? 0 : -1}
-                aria-label={`Select cube ${cubeIndex + 1}`}
-                aria-pressed={selectedCubeIndex === cubeIndex}
-                title={`Cube ${cubeIndex + 1}`}
-                onFocus={() => setFocusedCubeIndex(cubeIndex)}
-                onClick={() => selectCube(cubeIndex)}
-                onKeyDown={(event) => moveCubeFocus(cubeIndex, event.key, event)}
-              >
-                <span>{cubeIndex + 1}</span>
-              </button>
-            ))}
+            <button
+              type="button"
+              className={selectedCubeIndex === focusedCubeIndex ? 'cube-selection-button selected' : 'cube-selection-button'}
+              tabIndex={0}
+              aria-label={`Select cube ${focusedCubeIndex + 1}. Use arrow keys to move.`}
+              aria-pressed={selectedCubeIndex === focusedCubeIndex}
+              title={`Cube ${focusedCubeIndex + 1}`}
+              onClick={handleOverlayClick}
+              onKeyDown={(event) => moveCubeFocus(focusedCubeIndex, event.key, event)}
+              onPointerMove={handlePointerMove}
+              onPointerLeave={() => setHoveredCubeIndex(null)}
+            >
+              <span className="cube-selection-focus" style={cubeHighlightStyle(focusedCubeIndex, cubeRows, cols)} aria-hidden="true">
+                <span className="cube-selection-label">{focusedCubeIndex + 1}</span>
+              </span>
+              {selectedCubeIndex !== null && selectedCubeIndex !== focusedCubeIndex ? (
+                <span className="cube-selection-selected" style={cubeHighlightStyle(selectedCubeIndex, cubeRows, cols)} aria-hidden="true">
+                  <span className="cube-selection-label">{selectedCubeIndex + 1}</span>
+                </span>
+              ) : null}
+              {hoveredCubeIndex !== null && hoveredCubeIndex !== focusedCubeIndex && hoveredCubeIndex !== selectedCubeIndex ? (
+                <span className="cube-selection-hover" style={cubeHighlightStyle(hoveredCubeIndex, cubeRows, cols)} aria-hidden="true" />
+              ) : null}
+            </button>
           </div>
         ) : null}
       </div>

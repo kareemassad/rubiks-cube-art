@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { PreviewPanel } from './PreviewPanel'
+import { getSelectionScrollBehavior, PreviewPanel } from './PreviewPanel'
 import type { GeneratedCube, GeneratedCubeGroup, MosaicPlan, TargetFace } from '../types'
 
 const pdfExportMock = vi.fn(() => <a href="/test.pdf">Export PDF</a>)
@@ -40,6 +40,14 @@ function plan(): MosaicPlan {
 }
 
 describe('PreviewPanel', () => {
+  it('uses instant scrolling when reduced motion is requested', () => {
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true })))
+
+    expect(getSelectionScrollBehavior()).toBe('auto')
+
+    vi.unstubAllGlobals()
+  })
+
   it('does not load the PDF export module until the user asks for export', () => {
     const nextPlan = plan()
     const groups: GeneratedCubeGroup[] = [{ id: 'white', cube: nextPlan.cubes[0], indices: [0] }]

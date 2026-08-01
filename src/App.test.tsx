@@ -96,6 +96,17 @@ describe('App', () => {
     expect(next).toHaveFocus()
   })
 
+  it('does not reset focus when the close callback identity changes', () => {
+    const cube = { ...instructionCube, buildMoves: ['R', 'U'] }
+    const { rerender } = render(<InstructionPlayer cube={cube} index={0} totalCubes={1} onClose={() => undefined} />)
+    const next = screen.getByRole('button', { name: 'Next' })
+    next.focus()
+
+    rerender(<InstructionPlayer cube={cube} index={0} totalCubes={1} onClose={() => undefined} />)
+
+    expect(next).toHaveFocus()
+  })
+
   it('keeps the selected cube highlighted after closing its instruction sheet', async () => {
     const previewMock = vi.mocked(quantizeImagePreview)
     const generateMock = vi.mocked(generateMosaicPlan)

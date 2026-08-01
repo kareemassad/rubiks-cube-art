@@ -49,6 +49,7 @@ export function quantizeImagePreview(
         rows,
         cols,
         cropToWall: options.cropToWall ?? true,
+        maxSourceDimension: options.maxSourceDimension,
       })
     } catch {
       worker.terminate()
