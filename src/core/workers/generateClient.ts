@@ -1,10 +1,9 @@
 import { generateMosaicPlanFromGrid } from '../mosaic'
-import type { MosaicPlan, MosaicProgress, OptimizerOptions, StickerGrid } from '../../types'
+import type { MosaicPlan, MosaicProgress, StickerGrid } from '../../types'
 
 type GenerateOptions = {
   rows: number
   cols: number
-  optimizer: Partial<OptimizerOptions>
   onProgress?: (progress: MosaicProgress) => void
 }
 
@@ -51,7 +50,6 @@ export function generateMosaicPlan(
       stickerGrid,
       rows: options.rows,
       cols: options.cols,
-      optimizer: options.optimizer,
     })
   })
 }

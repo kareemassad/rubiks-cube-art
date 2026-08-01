@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findContentCropBox } from '../image/palette'
+import { findContentCropBox, previewSourceSize } from '../image/palette'
 
 describe('image crop detection', () => {
   it('crops mostly-white borders around visible content', () => {
@@ -25,5 +25,15 @@ describe('image crop detection', () => {
     data.fill(255)
 
     expect(findContentCropBox(data, 2, 2)).toEqual({ sx: 0, sy: 0, sw: 2, sh: 2 })
+  })
+})
+
+describe('preview source sizing', () => {
+  it('does not upscale small images', () => {
+    expect(previewSourceSize(800, 600)).toEqual({ width: 800, height: 600 })
+  })
+
+  it('caps large images while preserving their aspect ratio', () => {
+    expect(previewSourceSize(4000, 2000)).toEqual({ width: 1600, height: 800 })
   })
 })

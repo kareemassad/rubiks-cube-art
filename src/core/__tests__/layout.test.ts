@@ -43,4 +43,11 @@ describe('layout limits', () => {
     expect(chooseLayoutForCubeCount(2000, 1)).toEqual({ rows: 50, cols: 40 })
     expect(chooseLayoutForCubeCount(3000, 2)).toEqual({ rows: 40, cols: 50 })
   })
+
+  it('keeps the target cube count when the image is portrait', () => {
+    const layout = chooseLayoutForCubeCount(4, 0.6)
+
+    expect(layout).toEqual({ rows: 2, cols: 2 })
+    expect(layout.rows * layout.cols).toBe(4)
+  })
 })

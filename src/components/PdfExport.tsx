@@ -17,7 +17,7 @@ export function PdfExport({
       fileName="rubiks-cube-art-instructions.pdf"
       className="secondary-button pdf-button"
     >
-      {({ loading }) => (loading ? 'Preparing PDF' : 'Export PDF')}
+      {({ loading }) => (loading ? 'Preparing PDF…' : 'Export PDF')}
     </PDFDownloadLink>
   )
 }

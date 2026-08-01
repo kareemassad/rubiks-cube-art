@@ -1,38 +1,34 @@
-import { applyMoves, faceColors, solveState, solvedState, targetKey } from '../cube'
+import { applyMoves, faceColors, normalizeMoves, solveState, solvedState, targetKey } from '../cube'
 import { buildExactFaceletState } from '../cube/exactFace'
+import { CUBE_PRESET_COUNTS } from '../layout'
 import type {
   GeneratedCube,
   GeneratedCubeGroup,
   MountRotation,
   MosaicPlan,
   MosaicProgress,
-  OptimizerOptions,
   RubikColor,
   StickerGrid,
   TargetFace,
 } from '../../types'
 
-const MOVE_FACES = ['U', 'R', 'F', 'D', 'L', 'B'] as const
-const MOVE_SUFFIXES = ['', "'", '2'] as const
-const MOVES = MOVE_FACES.flatMap((face) => MOVE_SUFFIXES.map((suffix) => `${face}${suffix}`))
-
-const DEFAULT_OPTIMIZER: OptimizerOptions = { mode: 'balanced', maxDepth: 3, candidateLimit: 1800 }
-
 type SuggestedLayout = {
-  label: 'Min' | 'Balanced' | 'Max'
+  label: 'Small' | 'Recommended' | 'Detailed'
   rows: number
   cols: number
 }
 
 export function chooseAutoLayout(cubeCount: number, imageAspectRatio: number): { rows: number; cols: number } {
-  let best = { rows: 1, cols: Math.max(1, cubeCount) }
+  const target = Math.max(1, Math.round(cubeCount))
+  let best = { rows: 1, cols: target }
   let bestScore = Number.POSITIVE_INFINITY
+  const targetAspect = Math.max(0.01, imageAspectRatio)
 
-  for (let rows = 1; rows <= cubeCount; rows++) {
-    const cols = Math.ceil(cubeCount / rows)
+  for (let rows = 1; rows <= target; rows++) {
+    if (target % rows !== 0) continue
+    const cols = target / rows
     const aspect = cols / rows
-    const emptyPenalty = cols * rows - cubeCount
-    const score = Math.abs(aspect - imageAspectRatio) + emptyPenalty * 0.08
+    const score = Math.abs(Math.log(aspect / targetAspect)) + Math.abs(Math.log(aspect)) * 0.01
     if (score < bestScore) {
       best = { rows, cols }
       bestScore = score
@@ -42,17 +38,8 @@ export function chooseAutoLayout(cubeCount: number, imageAspectRatio: number): {
   return best
 }
 
-export function suggestLayouts(imageAspectRatio: number, cubeBudget = 2000): SuggestedLayout[] {
-  const max = Math.max(1, Math.round(cubeBudget))
-  const min = Math.min(120, max)
-  const balanced = Math.max(min, Math.round((min + max) / 2))
-  const counts = [
-    { label: 'Min' as const, count: min },
-    { label: 'Balanced' as const, count: balanced },
-    { label: 'Max' as const, count: max },
-  ]
-
-  return counts.map(({ label, count }) => ({ label, ...chooseAutoLayout(count, imageAspectRatio) }))
+export function suggestLayouts(imageAspectRatio: number): SuggestedLayout[] {
+  return CUBE_PRESET_COUNTS.map(({ label, count }) => ({ label, ...chooseAutoLayout(count, imageAspectRatio) }))
 }
 
 export function splitIntoTargetFaces(grid: StickerGrid, rows: number, cols: number): TargetFace[] {
@@ -88,7 +75,34 @@ function reverseMove(move: string): string {
 }
 
 export function reverseMoves(moves: string[]): string[] {
-  return [...moves].reverse().map(reverseMove)
+  return normalizeMoves([...moves].reverse().map(reverseMove))
+}
+
+export function verifyBuildMoves(
+  buildMoves: string[],
+  targetFace: TargetFace,
+  displayFace: RubikColor,
+): boolean {
+  const rebuiltState = applyMoves(solvedState(), buildMoves)
+  return targetKey(faceColors(rebuiltState, displayFace)) === targetKey(targetFace)
+}
+
+function buildVerifiedMoves(
+  faceletState: string,
+  targetFace: TargetFace,
+  displayFace: RubikColor,
+): { solveMoves: string[]; buildMoves: string[]; outputFace: TargetFace } {
+  const solveMoves = solveState(faceletState)
+  const buildMoves = reverseMoves(solveMoves)
+  if (!verifyBuildMoves(buildMoves, targetFace, displayFace)) {
+    throw new Error('Cube instructions failed exact face verification')
+  }
+
+  return {
+    solveMoves,
+    buildMoves,
+    outputFace: faceColors(applyMoves(solvedState(), buildMoves), displayFace),
+  }
 }
 
 export function rotateTargetFace(face: TargetFace, degrees: MountRotation): TargetFace {
@@ -136,104 +150,26 @@ function countMatches(a: TargetFace, b: TargetFace): number {
   return matched
 }
 
-function candidateScore(matches: number, depth: number, mode: OptimizerOptions['mode']): number {
-  const visualWeight = mode === 'moves' ? 6 : mode === 'visual' ? 100 : 24
-  const movePenalty = mode === 'visual' ? 0.1 : mode === 'moves' ? 2 : 1
-  return matches * visualWeight - depth * movePenalty
-}
-
 function centerColor(targetFace: TargetFace): RubikColor {
   return targetFace[1][1]
 }
 
-export async function generateCubeForTarget(
-  targetFace: TargetFace,
-  optimizer: Partial<OptimizerOptions> = {},
-): Promise<GeneratedCube> {
-  const options = { ...DEFAULT_OPTIMIZER, ...optimizer }
+export async function generateCubeForTarget(targetFace: TargetFace): Promise<GeneratedCube> {
   const displayFace = centerColor(targetFace)
   const exactState = buildExactFaceletState(targetFace)
-  if (exactState) {
-    const solveMoves = solveState(exactState)
-    return {
-      targetFace,
-      outputFace: targetFace,
-      solvedFace: targetFace,
-      mountRotation: 0,
-      displayFace,
-      faceletState: exactState,
-      solveMoves,
-      buildMoves: reverseMoves(solveMoves),
-      score: { matched: 9, total: 9, exact: true, moveCount: solveMoves.length },
-    }
-  }
+  if (!exactState) throw new Error('Could not generate exact instructions for this cube face.')
 
-  const initial = solvedState()
-  const seen = new Set([initial])
-  const queue: Array<{ state: string; path: string[] }> = [{ state: initial, path: [] }]
-  let best = {
-    state: initial,
-    path: [] as string[],
-    matches: countMatches(faceColors(initial, displayFace), targetFace),
-    score: candidateScore(countMatches(faceColors(initial, displayFace), targetFace), 0, options.mode),
-  }
-  let evaluated = 0
-
-  while (queue.length > 0) {
-    const current = queue.shift()
-    if (!current) break
-    evaluated++
-    const currentFace = faceColors(current.state, displayFace)
-    const matches = countMatches(currentFace, targetFace)
-    const score = candidateScore(matches, current.path.length, options.mode)
-
-    if (matches === 9) {
-      const solveMoves = solveState(current.state)
-      return {
-        targetFace,
-        outputFace: currentFace,
-        solvedFace: currentFace,
-        mountRotation: 0,
-        displayFace,
-        faceletState: current.state,
-        solveMoves,
-        buildMoves: reverseMoves(solveMoves),
-        score: { matched: 9, total: 9, exact: true, moveCount: solveMoves.length },
-      }
-    }
-
-    if (score > best.score) {
-      best = { state: current.state, path: current.path, matches, score }
-    }
-
-    if (current.path.length >= options.maxDepth || evaluated >= options.candidateLimit) continue
-
-    const previousFace = current.path.at(-1)?.[0]
-    for (const move of MOVES) {
-      if (previousFace && move[0] === previousFace) continue
-      const nextState = applyMoves(current.state, move)
-      if (seen.has(nextState)) continue
-      seen.add(nextState)
-      queue.push({ state: nextState, path: [...current.path, move] })
-    }
-  }
-
-  const solveMoves = solveState(best.state)
+  const verified = buildVerifiedMoves(exactState, targetFace, displayFace)
   return {
     targetFace,
-    outputFace: faceColors(best.state, displayFace),
-    solvedFace: faceColors(best.state, displayFace),
+    outputFace: verified.outputFace,
+    solvedFace: verified.outputFace,
     mountRotation: 0,
     displayFace,
-    faceletState: best.state,
-    solveMoves,
-    buildMoves: reverseMoves(solveMoves),
-    score: {
-      matched: best.matches,
-      total: 9,
-      exact: best.matches === 9,
-      moveCount: solveMoves.length,
-    },
+    faceletState: exactState,
+    solveMoves: verified.solveMoves,
+    buildMoves: verified.buildMoves,
+    score: { matched: 9, total: 9, exact: true, moveCount: verified.buildMoves.length },
   }
 }
 
@@ -242,7 +178,6 @@ export async function generateMosaicPlanFromGrid(
   options: {
     rows: number
     cols: number
-    optimizer?: Partial<OptimizerOptions>
     onProgress?: (progress: MosaicProgress) => void
   },
 ): Promise<MosaicPlan> {
@@ -269,7 +204,7 @@ export async function generateMosaicPlanFromGrid(
       continue
     }
     misses++
-    const generated = await generateCubeForTarget(canonical.face, options.optimizer)
+    const generated = await generateCubeForTarget(canonical.face)
     const cube = rotateGeneratedCube(generated, target, canonical.mountRotation)
     cache.set(key, { cube: generated, index, originalKey })
     cubes.push(cube)

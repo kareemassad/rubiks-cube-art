@@ -6,6 +6,8 @@ export type QuantizeOptions = {
   cropToWall?: boolean
 }
 
+export const MAX_PREVIEW_SOURCE_DIMENSION = 1600
+
 const RUBIK_PALETTE: Readonly<Record<RubikColor, Rgb>> = {
   W: { r: 248, g: 250, b: 252 },
   Y: { r: 255, g: 213, b: 0 },
@@ -103,6 +105,14 @@ export function containDrawBox(sourceWidth: number, sourceHeight: number, target
   }
 }
 
+export function previewSourceSize(sourceWidth: number, sourceHeight: number) {
+  const scale = Math.min(1, MAX_PREVIEW_SOURCE_DIMENSION / sourceWidth, MAX_PREVIEW_SOURCE_DIMENSION / sourceHeight)
+  return {
+    width: Math.max(1, Math.round(sourceWidth * scale)),
+    height: Math.max(1, Math.round(sourceHeight * scale)),
+  }
+}
+
 export async function quantizeImage(
   image: HTMLImageElement | ImageBitmap,
   cubeRows: number,
@@ -112,8 +122,11 @@ export async function quantizeImage(
   const width = cubeCols * 3
   const height = cubeRows * 3
   const canvas = document.createElement('canvas')
-  const sourceWidth = 'naturalWidth' in image ? image.naturalWidth : image.width
-  const sourceHeight = 'naturalHeight' in image ? image.naturalHeight : image.height
+  const originalWidth = 'naturalWidth' in image ? image.naturalWidth : image.width
+  const originalHeight = 'naturalHeight' in image ? image.naturalHeight : image.height
+  const sourceSize = previewSourceSize(originalWidth, originalHeight)
+  const sourceWidth = sourceSize.width
+  const sourceHeight = sourceSize.height
   canvas.width = sourceWidth
   canvas.height = sourceHeight
   const sourceCtx = canvas.getContext('2d', { willReadFrequently: true })
@@ -137,10 +150,10 @@ export async function quantizeImage(
   ctx.fillStyle = '#fff'
   ctx.fillRect(0, 0, width, height)
   if (options.cropToWall ?? true) {
-    ctx.drawImage(image, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, width, height)
+    ctx.drawImage(canvas, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, width, height)
   } else {
     const box = containDrawBox(sourceWidth, sourceHeight, width, height)
-    ctx.drawImage(image, 0, 0, sourceWidth, sourceHeight, box.dx, box.dy, box.dw, box.dh)
+    ctx.drawImage(canvas, 0, 0, sourceWidth, sourceHeight, box.dx, box.dy, box.dw, box.dh)
   }
   const data = ctx.getImageData(0, 0, width, height).data
   const grid: StickerGrid = []

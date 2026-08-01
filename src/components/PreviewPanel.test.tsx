@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { PreviewPanel } from './PreviewPanel'
 import type { GeneratedCube, GeneratedCubeGroup, MosaicPlan, TargetFace } from '../types'
@@ -43,6 +43,7 @@ describe('PreviewPanel', () => {
   it('does not load the PDF export module until the user asks for export', () => {
     const nextPlan = plan()
     const groups: GeneratedCubeGroup[] = [{ id: 'white', cube: nextPlan.cubes[0], indices: [0] }]
+    const onSelectCube = vi.fn()
 
     render(
       <PreviewPanel
@@ -56,14 +57,20 @@ describe('PreviewPanel', () => {
         isGenerating={false}
         isPreviewing={false}
         progress={null}
-        completedGroupIds={new Set()}
+        completedCubeIds={new Set()}
         celebratingGroupId={null}
+        selectedCubeIndex={null}
         onToggleComplete={() => undefined}
-        onInspectCube={() => undefined}
+        onSelectCube={onSelectCube}
       />,
     )
 
     expect(screen.getByRole('button', { name: /prepare pdf/i })).toBeInTheDocument()
+    expect(screen.getByText(/cube 1/i)).toBeInTheDocument()
+    const inspectButton = screen.getByRole('button', { name: /view instructions for cube 1/i })
+    expect(inspectButton).toBeInTheDocument()
+    fireEvent.click(inspectButton)
+    expect(onSelectCube).toHaveBeenCalledWith(0)
     expect(pdfExportMock).not.toHaveBeenCalled()
   })
 })

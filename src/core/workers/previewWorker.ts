@@ -3,6 +3,7 @@ import {
   cropToAspect,
   findContentCropBox,
   nearestRubikColor,
+  previewSourceSize,
 } from '../image/palette'
 import type { RubikColor, StickerGrid } from '../../types'
 
@@ -31,8 +32,9 @@ function context2d(canvas: OffscreenCanvas): OffscreenCanvasRenderingContext2D {
 function quantizeBitmap(image: ImageBitmap, cubeRows: number, cubeCols: number, cropToWall: boolean): StickerGrid {
   const width = cubeCols * 3
   const height = cubeRows * 3
-  const sourceWidth = image.width
-  const sourceHeight = image.height
+  const sourceSize = previewSourceSize(image.width, image.height)
+  const sourceWidth = sourceSize.width
+  const sourceHeight = sourceSize.height
 
   const source = new OffscreenCanvas(sourceWidth, sourceHeight)
   const sourceContext = context2d(source)
@@ -51,10 +53,10 @@ function quantizeBitmap(image: ImageBitmap, cubeRows: number, cubeCols: number, 
   sampleContext.fillStyle = '#fff'
   sampleContext.fillRect(0, 0, width, height)
   if (cropToWall) {
-    sampleContext.drawImage(image, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, width, height)
+    sampleContext.drawImage(source, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, width, height)
   } else {
     const box = containDrawBox(sourceWidth, sourceHeight, width, height)
-    sampleContext.drawImage(image, 0, 0, sourceWidth, sourceHeight, box.dx, box.dy, box.dw, box.dh)
+    sampleContext.drawImage(source, 0, 0, sourceWidth, sourceHeight, box.dx, box.dy, box.dw, box.dh)
   }
 
   const data = sampleContext.getImageData(0, 0, width, height).data

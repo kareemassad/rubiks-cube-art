@@ -8,14 +8,6 @@ export type TargetFace = [
 
 export type StickerGrid = RubikColor[][]
 
-type OptimizerMode = 'visual' | 'balanced' | 'moves'
-
-export type OptimizerOptions = {
-  mode: OptimizerMode
-  maxDepth: number
-  candidateLimit: number
-}
-
 export type MountRotation = 0 | 90 | 180 | 270
 
 export type GeneratedCube = {

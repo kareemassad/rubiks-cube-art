@@ -1,4 +1,10 @@
 export const MAX_GENERATION_CUBES = 2000
+export const RECOMMENDED_CUBE_COUNT = 30
+export const CUBE_PRESET_COUNTS = [
+  { label: 'Small', count: 12 },
+  { label: 'Recommended', count: RECOMMENDED_CUBE_COUNT },
+  { label: 'Detailed', count: 60 },
+] as const
 
 const MIN_CUBE_DIMENSION = 1
 const MAX_CUBE_DIMENSION = MAX_GENERATION_CUBES
@@ -36,14 +42,13 @@ export function chooseLayoutForCubeCount(count: number, imageAspectRatio: number
   const target = clampCubeDimension(count, MAX_GENERATION_CUBES)
   let best = { rows: 1, cols: target }
   let bestScore = Number.POSITIVE_INFINITY
+  const targetAspect = Math.max(0.01, imageAspectRatio)
 
   for (let rows = 1; rows <= target; rows++) {
-    const cols = Math.ceil(target / rows)
-    const total = rows * cols
-    if (total > MAX_GENERATION_CUBES) continue
+    if (target % rows !== 0) continue
+    const cols = target / rows
     const aspect = cols / rows
-    const emptyPenalty = total - target
-    const score = Math.abs(aspect - imageAspectRatio) + emptyPenalty * 0.08
+    const score = Math.abs(Math.log(aspect / targetAspect)) + Math.abs(Math.log(aspect)) * 0.01
     if (score < bestScore) {
       best = { rows, cols }
       bestScore = score

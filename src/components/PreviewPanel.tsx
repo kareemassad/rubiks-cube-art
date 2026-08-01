@@ -1,12 +1,11 @@
-import { lazy, Suspense, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Grid3X3, Loader2 } from 'lucide-react'
 import { CubeCard } from './CubeCard'
 import { StickerGridPreview } from './StickerGridPreview'
-import { buildCubeToGroupIndex } from '../core/mosaic/planIdentity'
 import type { GeneratedCubeGroup, MosaicPlan, MosaicProgress, StickerGrid } from '../types'
 
 const LazyPdfExport = lazy(() => import('./PdfExport').then((module) => ({ default: module.PdfExport })))
-const CUBE_GROUP_PAGE_SIZE = 96
+const CUBE_PAGE_SIZE = 96
 
 type QuantizedPreview = {
   grid: StickerGrid
@@ -25,10 +24,11 @@ export function PreviewPanel({
   isGenerating,
   isPreviewing,
   progress,
-  completedGroupIds,
+  completedCubeIds,
   celebratingGroupId,
+  selectedCubeIndex,
   onToggleComplete,
-  onInspectCube,
+  onSelectCube,
 }: {
   plan: MosaicPlan | null
   quantizedPreview: QuantizedPreview | null
@@ -40,31 +40,34 @@ export function PreviewPanel({
   isGenerating: boolean
   isPreviewing: boolean
   progress: MosaicProgress | null
-  completedGroupIds: Set<string>
+  completedCubeIds: Set<string>
   celebratingGroupId: string | null
-  onToggleComplete: (groupId: string) => void
-  onInspectCube: (cubeIndex: number) => void
+  selectedCubeIndex: number | null
+  onToggleComplete: (cubeIndex: number) => void
+  onSelectCube: (cubeIndex: number) => void
 }) {
-  const [groupPage, setGroupPage] = useState(0)
+  const [cubePage, setCubePage] = useState(0)
   const [cubeLookup, setCubeLookup] = useState('')
-  const [highlightedGroupId, setHighlightedGroupId] = useState<string | null>(null)
   const [pdfRequested, setPdfRequested] = useState(false)
-  const totalGroupPages = Math.max(1, Math.ceil(cubeGroups.length / CUBE_GROUP_PAGE_SIZE))
-  const activeGroupPage = Math.min(groupPage, totalGroupPages - 1)
-  const cubeToGroupId = useMemo(() => buildCubeToGroupIndex(cubeGroups), [cubeGroups])
-  const visibleCubeGroups = useMemo(
-    () => cubeGroups.slice(activeGroupPage * CUBE_GROUP_PAGE_SIZE, (activeGroupPage + 1) * CUBE_GROUP_PAGE_SIZE),
-    [activeGroupPage, cubeGroups],
-  )
+  const totalCubePages = Math.max(1, Math.ceil((plan?.cubes.length ?? 0) / CUBE_PAGE_SIZE))
+  const activeCubePage = Math.min(cubePage, totalCubePages - 1)
+  const visibleCubeIndexes = plan
+    ? Array.from(
+        { length: Math.min(CUBE_PAGE_SIZE, plan.cubes.length - activeCubePage * CUBE_PAGE_SIZE) },
+        (_, offset) => activeCubePage * CUBE_PAGE_SIZE + offset,
+      )
+    : []
+
+  useEffect(() => {
+    if (selectedCubeIndex === null) return
+    const card = document.getElementById(`cube-card-${selectedCubeIndex}`)
+    card?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
+  }, [selectedCubeIndex])
 
   function openCube(cubeIndex: number) {
-    const groupId = cubeToGroupId.get(cubeIndex)
-    if (groupId) {
-      const groupIndex = cubeGroups.findIndex((group) => group.id === groupId)
-      if (groupIndex >= 0) setGroupPage(Math.floor(groupIndex / CUBE_GROUP_PAGE_SIZE))
-      setHighlightedGroupId(groupId)
-    }
-    onInspectCube(cubeIndex)
+    if (!plan || cubeIndex < 0 || cubeIndex >= plan.cubes.length) return
+    setCubePage(Math.floor(cubeIndex / CUBE_PAGE_SIZE))
+    onSelectCube(cubeIndex)
   }
 
   function openLookupCube() {
@@ -105,11 +108,20 @@ export function PreviewPanel({
               {plan.cacheStats.hits} duplicates reused · {plan.cacheStats.rotationHits} rotated
             </span>
           </div>
-          {outputGrid && <StickerGridPreview grid={outputGrid} cols={plan.cols} label="Buildable generated cube mosaic preview" />}
+          {outputGrid && (
+            <StickerGridPreview
+              grid={outputGrid}
+              rows={plan.rows}
+              cols={plan.cols}
+              selectedCubeIndex={selectedCubeIndex}
+              onSelectCube={openCube}
+              label="Buildable generated cube mosaic preview"
+            />
+          )}
           {outputGrid ? (
             <div className="pdf-export">
               {pdfRequested ? (
-                <Suspense fallback={<button className="secondary-button" disabled>Preparing PDF</button>}>
+                <Suspense fallback={<button className="secondary-button" disabled>Preparing PDF…</button>}>
                   <LazyPdfExport plan={plan} groups={cubeGroups} outputGrid={outputGrid} />
                 </Suspense>
               ) : (
@@ -126,6 +138,7 @@ export function PreviewPanel({
               <span>Open cube</span>
               <input
                 aria-label="Open cube number"
+                name="cubeLookup"
                 type="number"
                 min={1}
                 max={plan.cubes.length}
@@ -139,36 +152,44 @@ export function PreviewPanel({
             </label>
             <button type="button" onClick={openLookupCube}>Open</button>
           </div>
-          {cubeGroups.length > CUBE_GROUP_PAGE_SIZE ? (
+          {plan.cubes.length > CUBE_PAGE_SIZE ? (
             <div className="cube-list-toolbar">
               <span>
-                Showing {activeGroupPage * CUBE_GROUP_PAGE_SIZE + 1}-{Math.min(cubeGroups.length, (activeGroupPage + 1) * CUBE_GROUP_PAGE_SIZE)} of {cubeGroups.length} groups
+                Showing {activeCubePage * CUBE_PAGE_SIZE + 1}-{Math.min(plan.cubes.length, (activeCubePage + 1) * CUBE_PAGE_SIZE)} of {plan.cubes.length} cubes
               </span>
               <div className="pagination-controls">
-                <button onClick={() => setGroupPage((page) => Math.max(0, page - 1))} disabled={activeGroupPage === 0}>
+                <button onClick={() => setCubePage((page) => Math.max(0, page - 1))} disabled={activeCubePage === 0}>
                   Previous
                 </button>
                 <strong>
-                  {activeGroupPage + 1} / {totalGroupPages}
+                  {activeCubePage + 1} / {totalCubePages}
                 </strong>
-                <button onClick={() => setGroupPage((page) => Math.min(totalGroupPages - 1, page + 1))} disabled={activeGroupPage >= totalGroupPages - 1}>
+                <button onClick={() => setCubePage((page) => Math.min(totalCubePages - 1, page + 1))} disabled={activeCubePage >= totalCubePages - 1}>
                   Next
                 </button>
               </div>
             </div>
           ) : null}
           <div className="cube-list">
-            {visibleCubeGroups.map((group) => (
+            {visibleCubeIndexes.map((cubeIndex) => {
+              const cube = plan.cubes[cubeIndex]
+              const cubeRow = Math.floor(cubeIndex / plan.cols) + 1
+              const cubeColumn = (cubeIndex % plan.cols) + 1
+              return (
               <CubeCard
-                key={group.id}
-                group={group}
-                completed={completedGroupIds.has(group.id)}
-                celebrating={celebratingGroupId === group.id}
-                highlighted={highlightedGroupId === group.id}
+                key={cubeIndex}
+                id={`cube-card-${cubeIndex}`}
+                cube={cube}
+                cubeIndex={cubeIndex}
+                positionLabel={`Row ${cubeRow} · Column ${cubeColumn}`}
+                completed={completedCubeIds.has(`cube-${cubeIndex}`)}
+                celebrating={celebratingGroupId === `cube-${cubeIndex}`}
+                highlighted={selectedCubeIndex === cubeIndex}
                 onToggleComplete={onToggleComplete}
                 onInspectCube={openCube}
               />
-            ))}
+              )
+            })}
           </div>
         </>
       ) : quantizedPreview ? (
