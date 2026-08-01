@@ -13,7 +13,6 @@ type PreviewRequest = {
   rows: number
   cols: number
   cropToWall: boolean
-  maxSourceDimension?: number
 }
 
 type PreviewResponse =
@@ -35,11 +34,10 @@ function quantizeBitmap(
   cubeRows: number,
   cubeCols: number,
   cropToWall: boolean,
-  maxSourceDimension?: number,
 ): StickerGrid {
   const width = cubeCols * 3
   const height = cubeRows * 3
-  const sourceSize = previewSourceSize(image.width, image.height, width, height, maxSourceDimension)
+  const sourceSize = previewSourceSize(image.width, image.height, width, height)
   const sourceWidth = sourceSize.width
   const sourceHeight = sourceSize.height
 
@@ -80,9 +78,9 @@ function quantizeBitmap(
 }
 
 self.onmessage = (event: MessageEvent<PreviewRequest>) => {
-  const { id, image, rows, cols, cropToWall, maxSourceDimension } = event.data
+  const { id, image, rows, cols, cropToWall } = event.data
   try {
-    post({ id, type: 'complete', grid: quantizeBitmap(image, rows, cols, cropToWall, maxSourceDimension) })
+    post({ id, type: 'complete', grid: quantizeBitmap(image, rows, cols, cropToWall) })
   } catch (error) {
     post({ id, type: 'error', message: error instanceof Error ? error.message : 'Preview worker failed.' })
   }

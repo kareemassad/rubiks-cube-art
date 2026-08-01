@@ -4,11 +4,9 @@ type Rgb = { r: number; g: number; b: number }
 type CropBox = { sx: number; sy: number; sw: number; sh: number }
 export type QuantizeOptions = {
   cropToWall?: boolean
-  maxSourceDimension?: number
 }
 
 export const MAX_PREVIEW_SOURCE_DIMENSION = 1600
-export const MAX_GENERATION_SOURCE_DIMENSION = 2400
 
 const RUBIK_PALETTE: Readonly<Record<RubikColor, Rgb>> = {
   W: { r: 248, g: 250, b: 252 },
@@ -119,19 +117,13 @@ export function previewSourceSize(
   sourceHeight: number,
   minimumWidth = 1,
   minimumHeight = 1,
-  maxSourceDimension = MAX_PREVIEW_SOURCE_DIMENSION,
 ) {
   const safeWidth = Math.max(1, sourceWidth)
   const safeHeight = Math.max(1, sourceHeight)
   const requiredWidth = Math.min(safeWidth, Math.max(1, Math.round(minimumWidth)))
   const requiredHeight = Math.min(safeHeight, Math.max(1, Math.round(minimumHeight)))
   const minimumScale = Math.max(requiredWidth / safeWidth, requiredHeight / safeHeight)
-  const safeMaxSourceDimension = Number.isFinite(maxSourceDimension)
-    ? Math.max(1, Math.round(maxSourceDimension))
-    : maxSourceDimension === Number.POSITIVE_INFINITY
-      ? Number.POSITIVE_INFINITY
-      : MAX_PREVIEW_SOURCE_DIMENSION
-  const cappedScale = Math.min(1, safeMaxSourceDimension / safeWidth, safeMaxSourceDimension / safeHeight)
+  const cappedScale = Math.min(1, MAX_PREVIEW_SOURCE_DIMENSION / safeWidth, MAX_PREVIEW_SOURCE_DIMENSION / safeHeight)
   const scale = Math.max(minimumScale, cappedScale)
   return {
     width: Math.max(requiredWidth, Math.max(1, Math.round(safeWidth * scale))),
@@ -150,7 +142,7 @@ export async function quantizeImage(
   const canvas = document.createElement('canvas')
   const originalWidth = 'naturalWidth' in image ? image.naturalWidth : image.width
   const originalHeight = 'naturalHeight' in image ? image.naturalHeight : image.height
-  const sourceSize = previewSourceSize(originalWidth, originalHeight, width, height, options.maxSourceDimension)
+  const sourceSize = previewSourceSize(originalWidth, originalHeight, width, height)
   const sourceWidth = sourceSize.width
   const sourceHeight = sourceSize.height
   canvas.width = sourceWidth
