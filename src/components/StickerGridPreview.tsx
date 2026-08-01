@@ -29,6 +29,7 @@ function StickerGridPreviewComponent({
   const totalCubes = cubeRows * cols
   const stickerSize = totalCubes >= 1200 ? 4 : totalCubes >= 400 ? 6 : totalCubes >= 120 ? 8 : 12
   const stickerColumns = cols * 3
+  const cubeTrackSize = stickerSize * 3 + STICKER_GAP * 2
   const previewWidth = previewWidthFor(cols, stickerSize)
   const isInteractive = Boolean(onSelectCube && rows)
 
@@ -59,8 +60,8 @@ function StickerGridPreviewComponent({
             className="cube-selection-overlay"
             style={{
               gap: STICKER_GAP,
-              gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-              gridTemplateRows: `repeat(${cubeRows}, minmax(0, 1fr))`,
+              gridTemplateColumns: `repeat(${cols}, minmax(${cubeTrackSize}px, 1fr))`,
+              gridTemplateRows: `repeat(${cubeRows}, minmax(${cubeTrackSize}px, 1fr))`,
             }}
             aria-label="Select a cube from the mosaic"
           >

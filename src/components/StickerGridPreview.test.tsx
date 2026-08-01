@@ -30,4 +30,24 @@ describe('StickerGridPreview', () => {
     expect(container.querySelector('.sticker-preview')).toHaveStyle('gap: 2px')
     expect(container.querySelector('.cube-selection-overlay')).toHaveStyle('gap: 2px')
   })
+
+  it('uses cube-sized tracks for the selection overlay', () => {
+    const { container } = render(
+      <StickerGridPreview
+        grid={[
+          ['W', 'W', 'W', 'W', 'W', 'W'],
+          ['W', 'W', 'W', 'W', 'W', 'W'],
+          ['W', 'W', 'W', 'W', 'W', 'W'],
+        ]}
+        cols={2}
+        rows={1}
+        onSelectCube={() => undefined}
+      />,
+    )
+
+    expect(container.querySelector('.cube-selection-overlay')).toHaveStyle({
+      gridTemplateColumns: 'repeat(2, minmax(40px, 1fr))',
+      gridTemplateRows: 'repeat(1, minmax(40px, 1fr))',
+    })
+  })
 })
