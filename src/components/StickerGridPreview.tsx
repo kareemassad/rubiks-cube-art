@@ -63,6 +63,8 @@ function StickerGridPreviewComponent({
   const [focusedCubeIndex, setFocusedCubeIndex] = useState(0)
   const stickerScrollRef = useRef<HTMLDivElement | null>(null)
   const overlayRef = useRef<HTMLDivElement | null>(null)
+  const focusedCellRef = useRef<HTMLSpanElement | null>(null)
+  const shouldScrollFocusedCellRef = useRef(false)
 
   useEffect(() => {
     if (selectedCubeIndex === null || selectedCubeIndex >= totalCubes) return
@@ -85,6 +87,14 @@ function StickerGridPreviewComponent({
       scroll.scrollLeft -= viewport.left - cell.left
     } else if (cell.right > viewport.right) {
       scroll.scrollLeft += cell.right - viewport.right
+    }
+
+    const focusedCell = focusedCellRef.current
+    if (shouldScrollFocusedCellRef.current) {
+      shouldScrollFocusedCellRef.current = false
+      if (focusedCell && typeof focusedCell.scrollIntoView === 'function') {
+        focusedCell.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+      }
     }
   }, [cols, cubeRows, focusedCubeIndex, isInteractive])
 
@@ -121,10 +131,12 @@ function StickerGridPreviewComponent({
     const nextIndex = nextRow * cols + nextColumn
     if (nextIndex === cubeIndex || nextIndex >= totalCubes) return
     event.preventDefault()
+    shouldScrollFocusedCellRef.current = true
     setFocusedCubeIndex(nextIndex)
   }
 
   function selectCube(cubeIndex: number) {
+    shouldScrollFocusedCellRef.current = true
     setFocusedCubeIndex(cubeIndex)
     onSelectCube?.(cubeIndex)
   }
@@ -172,7 +184,7 @@ function StickerGridPreviewComponent({
               onClick={handleOverlayClick}
               onKeyDown={(event) => moveCubeFocus(focusedCubeIndex, event.key, event)}
             >
-              <span className="cube-selection-focus" style={cubeHighlightStyle(focusedCubeIndex, cubeRows, cols)} aria-hidden="true">
+              <span ref={focusedCellRef} className="cube-selection-focus" style={cubeHighlightStyle(focusedCubeIndex, cubeRows, cols)} aria-hidden="true">
                 <span className="cube-selection-label">{focusedCubeIndex + 1}</span>
               </span>
               {selectedCubeIndex !== null && selectedCubeIndex !== focusedCubeIndex ? (

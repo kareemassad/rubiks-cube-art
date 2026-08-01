@@ -119,4 +119,34 @@ describe('StickerGridPreview', () => {
 
     expect(scroll.scrollLeft).toBeGreaterThan(0)
   })
+
+  it('moves vertically and keeps the focused cube visible in a tall single-column mosaic', () => {
+    const grid: StickerGrid = [
+      ['W', 'W', 'W'],
+      ['W', 'W', 'W'],
+      ['W', 'W', 'W'],
+      ['W', 'W', 'W'],
+      ['W', 'W', 'W'],
+      ['W', 'W', 'W'],
+      ['W', 'W', 'W'],
+      ['W', 'W', 'W'],
+      ['W', 'W', 'W'],
+    ]
+    const { container } = render(<StickerGridPreview grid={grid} cols={1} rows={3} onSelectCube={() => undefined} />)
+    const button = screen.getByRole('button', { name: /select cube 1/i })
+    const focusedCell = container.querySelector('.cube-selection-focus') as HTMLSpanElement
+    const scrollIntoView = vi.fn()
+    focusedCell.scrollIntoView = scrollIntoView
+
+    fireEvent.keyDown(button, { key: 'ArrowDown' })
+
+    expect(button).toHaveAccessibleName('Select cube 2. Use arrow keys to move.')
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' })
+
+    scrollIntoView.mockClear()
+    fireEvent.keyDown(button, { key: 'ArrowUp' })
+
+    expect(button).toHaveAccessibleName('Select cube 1. Use arrow keys to move.')
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' })
+  })
 })

@@ -19,9 +19,7 @@ export function readCompletedGroups(storage: Storage | undefined, planHash: stri
 
 export function migrateCompletedGroupIds(completedIds: Set<string>, groups: GeneratedCubeGroup[]): Set<string> {
   const validCubeIds = new Set(groups.flatMap((group) => group.indices.map((index) => `cube-${index}`)))
-  const groupToCubeIds = new Map(
-    groups.map((group) => [group.id, group.indices.map((index) => `cube-${index}`)]),
-  )
+  const groupsById = new Map(groups.map((group) => [group.id, group]))
   const migrated = new Set<string>()
 
   for (const id of completedIds) {
@@ -30,7 +28,14 @@ export function migrateCompletedGroupIds(completedIds: Set<string>, groups: Gene
       continue
     }
 
-    for (const cubeId of groupToCubeIds.get(id) ?? []) migrated.add(cubeId)
+    const group = groupsById.get(id)
+    if (!group) continue
+
+    if (group.indices.length === 1) {
+      migrated.add(`cube-${group.indices[0]}`)
+    } else {
+      migrated.add(id)
+    }
   }
 
   return migrated
