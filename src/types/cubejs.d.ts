@@ -8,6 +8,6 @@ declare module 'cubejs' {
     asString(): string
     isSolved(): boolean
     move(algorithm: string): Cube
-    solve(maxDepth?: number): string
+    solve(): string
   }
 }

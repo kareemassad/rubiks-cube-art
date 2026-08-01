@@ -119,22 +119,51 @@ export function applyMoves(state: string, moves: string[] | string): string {
   return cube.asString()
 }
 
+function moveTurns(move: string): number {
+  if (move.endsWith("'")) return 3
+  if (move.endsWith('2')) return 2
+  return 1
+}
+
+function formatMove(face: string, turns: number): string {
+  if (turns === 1) return face
+  if (turns === 2) return `${face}2`
+  return `${face}'`
+}
+
+export function normalizeMoves(moves: string[]): string[] {
+  const normalized: string[] = []
+
+  for (const rawMove of moves) {
+    const move = rawMove.trim()
+    if (!move) continue
+    if (!/^[URFDLB](?:2|')?$/.test(move)) {
+      throw new Error(`Invalid cube move: ${move}`)
+    }
+
+    const previous = normalized.at(-1)
+    if (!previous || previous[0] !== move[0]) {
+      normalized.push(move)
+      continue
+    }
+
+    normalized.pop()
+    const combinedTurns = (moveTurns(previous) + moveTurns(move)) % 4
+    if (combinedTurns > 0) normalized.push(formatMove(move[0], combinedTurns))
+  }
+
+  return normalized
+}
+
 export function solveState(state: string): string[] {
   initSolver()
   const cube = Cube.fromString(state)
   if (cube.asString() !== state) throw new Error('Generated cube state is not physically reachable')
   if (cube.isSolved()) return []
 
-  for (let depth = 1; depth <= 4; depth++) {
-    try {
-      const short = cube.solve(depth)
-      return short.split(' ').filter(Boolean)
-    } catch {
-      // Keep probing shallow exact depths before falling back to cubejs default.
-    }
-  }
-
-  return cube.solve().split(' ').filter(Boolean)
+  const moves = normalizeMoves(cube.solve().split(' ').filter(Boolean))
+  if (applyMoves(state, moves) !== solvedState()) throw new Error('Cube solver returned an invalid solution')
+  return moves
 }
 
 export function faceColors(state: string, displayColor: RubikColor): TargetFace {

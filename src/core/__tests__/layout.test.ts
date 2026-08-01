@@ -5,6 +5,7 @@ import {
   clampColumnsForRows,
   clampCubeDimension,
   clampRowsForColumns,
+  layoutShapeMessage,
   layoutLimitMessage,
   MAX_GENERATION_CUBES,
   maxColumnsForRows,
@@ -42,5 +43,22 @@ describe('layout limits', () => {
     expect(chooseLayoutForCubeCount(30, 1.2)).toEqual({ rows: 5, cols: 6 })
     expect(chooseLayoutForCubeCount(2000, 1)).toEqual({ rows: 50, cols: 40 })
     expect(chooseLayoutForCubeCount(3000, 2)).toEqual({ rows: 40, cols: 50 })
+  })
+
+  it('keeps extreme portrait aspects eligible for the narrowest exact layout', () => {
+    expect(chooseLayoutForCubeCount(2000, 0.0001)).toEqual({ rows: 2000, cols: 1 })
+  })
+
+  it('keeps the target cube count when the image is portrait', () => {
+    const layout = chooseLayoutForCubeCount(4, 0.6)
+
+    expect(layout).toEqual({ rows: 2, cols: 2 })
+    expect(layout.rows * layout.cols).toBe(4)
+  })
+
+  it('explains when an exact count requires a single-row or single-column wall', () => {
+    expect(layoutShapeMessage(13, { rows: 1, cols: 13 })).toContain('exact 13-cube layout')
+    expect(layoutShapeMessage(6, { rows: 1, cols: 6 })).toContain('for this image shape')
+    expect(layoutShapeMessage(30, { rows: 5, cols: 6 })).toBeNull()
   })
 })

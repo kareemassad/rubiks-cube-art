@@ -216,7 +216,7 @@ export function Cube3D({ state, autoRotate = false }: { state: string; autoRotat
   return (
     <Canvas
       camera={{ position: [5.5, 5, 7], fov: 35 }}
-      dpr={[1, 2]}
+      dpr={[1, 1.5]}
       style={{ background: '#fff7e6' }}
     >
       <Scene state={state} autoRotate={autoRotate} />

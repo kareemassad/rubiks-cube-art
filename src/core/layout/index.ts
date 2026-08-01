@@ -1,4 +1,10 @@
 export const MAX_GENERATION_CUBES = 2000
+export const RECOMMENDED_CUBE_COUNT = 30
+export const CUBE_PRESET_COUNTS = [
+  { label: 'Small', count: 12 },
+  { label: 'Recommended', count: RECOMMENDED_CUBE_COUNT },
+  { label: 'Detailed', count: 60 },
+] as const
 
 const MIN_CUBE_DIMENSION = 1
 const MAX_CUBE_DIMENSION = MAX_GENERATION_CUBES
@@ -36,14 +42,13 @@ export function chooseLayoutForCubeCount(count: number, imageAspectRatio: number
   const target = clampCubeDimension(count, MAX_GENERATION_CUBES)
   let best = { rows: 1, cols: target }
   let bestScore = Number.POSITIVE_INFINITY
+  const targetAspect = Math.max(1 / target, Number.isFinite(imageAspectRatio) ? imageAspectRatio : 1)
 
   for (let rows = 1; rows <= target; rows++) {
-    const cols = Math.ceil(target / rows)
-    const total = rows * cols
-    if (total > MAX_GENERATION_CUBES) continue
+    if (target % rows !== 0) continue
+    const cols = target / rows
     const aspect = cols / rows
-    const emptyPenalty = total - target
-    const score = Math.abs(aspect - imageAspectRatio) + emptyPenalty * 0.08
+    const score = Math.abs(Math.log(aspect / targetAspect)) + Math.abs(Math.log(aspect)) * 0.01
     if (score < bestScore) {
       best = { rows, cols }
       bestScore = score
@@ -52,6 +57,25 @@ export function chooseLayoutForCubeCount(count: number, imageAspectRatio: number
 
   return best
 }
+
+export function layoutShapeMessage(count: number, layout: { rows: number; cols: number }): string | null {
+  const target = clampCubeDimension(count, MAX_GENERATION_CUBES)
+  if (target <= 1 || (layout.rows > 1 && layout.cols > 1)) return null
+
+  let hasBalancedFactorization = false
+  for (let divisor = 2; divisor * divisor <= target; divisor += 1) {
+    if (target % divisor === 0) {
+      hasBalancedFactorization = true
+      break
+    }
+  }
+
+  return hasBalancedFactorization
+    ? `The exact ${target}-cube layout is a single row or column (${layout.rows} x ${layout.cols}) for this image shape. Choose a nearby count for a more compact wall.`
+    : `An exact ${target}-cube layout needs a single row or column (${layout.rows} x ${layout.cols}). Choose a nearby count for a more compact wall.`
+}
+
+export const chooseAutoLayout = chooseLayoutForCubeCount
 
 export function layoutLimitMessage(rows: number, cols: number): string | null {
   const total = cubeCount(rows, cols)

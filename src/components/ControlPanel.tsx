@@ -1,6 +1,6 @@
 import type { WheelEvent } from 'react'
 import { Grid3X3, ImageUp, Loader2 } from 'lucide-react'
-import { MAX_GENERATION_CUBES } from '../core/layout'
+import { MAX_GENERATION_CUBES, RECOMMENDED_CUBE_COUNT } from '../core/layout'
 
 type LayoutPreset = {
   label: string
@@ -18,19 +18,20 @@ export function ControlPanel({
   cropToWall,
   rows,
   cols,
-  availableCubes,
+  cubesToUse,
   maxRows,
   maxCols,
   suggestedLayouts,
   selectedPreset,
   limitMessage,
+  layoutMessage,
   totalCubes,
   status,
   isLayoutPending,
   isGenerating,
   generateDisabled,
   onFile,
-  onCubeCountChange,
+  onCubesToUseChange,
   onRowsChange,
   onColsChange,
   onLayoutPreset,
@@ -42,19 +43,20 @@ export function ControlPanel({
   cropToWall: boolean
   rows: number
   cols: number
-  availableCubes: number
+  cubesToUse: number
   maxRows: number
   maxCols: number
   suggestedLayouts: LayoutPreset[]
   selectedPreset: string | null
   limitMessage: string | null
+  layoutMessage: string | null
   totalCubes: number
   status: string
   isLayoutPending: boolean
   isGenerating: boolean
   generateDisabled: boolean
   onFile: (file: File | undefined) => void
-  onCubeCountChange: (count: number) => void
+  onCubesToUseChange: (count: number) => void
   onRowsChange: (rows: number) => void
   onColsChange: (cols: number) => void
   onLayoutPreset: (layout: LayoutPreset) => void
@@ -70,7 +72,7 @@ export function ControlPanel({
       <label className="upload-drop">
         <ImageUp size={22} />
         <span>{loadedImage ? 'Replace source image' : 'Upload source image'}</span>
-        <input type="file" accept="image/*" onChange={(event) => onFile(event.target.files?.[0])} />
+        <input name="sourceImage" type="file" accept="image/*" onChange={(event) => onFile(event.target.files?.[0])} />
       </label>
 
       {loadedImage ? (
@@ -87,22 +89,24 @@ export function ControlPanel({
 
       <div className="field-grid">
         <label className="wide-field">
-          <span>Cubes available</span>
+          <span>Cubes to use</span>
           <input
-            aria-label="Cubes available"
+            aria-label="Cubes to use"
+            name="cubesToUse"
             type="number"
             min={1}
             max={MAX_GENERATION_CUBES}
-            value={availableCubes}
-            onChange={(event) => onCubeCountChange(Number(event.target.value))}
+            value={cubesToUse}
+            onChange={(event) => onCubesToUseChange(Number(event.target.value))}
             onWheel={stopNumberWheel}
           />
-          <small>Auto-fits rows and columns</small>
+          <small>Recommended: {RECOMMENDED_CUBE_COUNT} cubes for a balanced wall. More cubes add detail.</small>
         </label>
         <label>
           <span>Cube rows</span>
           <input
             aria-label="Cube rows"
+            name="cubeRows"
             type="number"
             min={1}
             max={maxRows}
@@ -116,6 +120,7 @@ export function ControlPanel({
           <span>Cube columns</span>
           <input
             aria-label="Cube columns"
+            name="cubeColumns"
             type="number"
             min={1}
             max={maxCols}
@@ -129,7 +134,7 @@ export function ControlPanel({
 
       {loadedImage && (
         <div className="layout-suggestions">
-          <span className="control-label">Layout presets</span>
+            <span className="control-label">Quick choices</span>
           <div className="suggestion-grid">
             {suggestedLayouts.map((layout) => (
               <button
@@ -154,6 +159,7 @@ export function ControlPanel({
       {loadedImage && (
         <label className="crop-toggle">
           <input
+            name="cropToWall"
             type="checkbox"
             checked={cropToWall}
             onChange={(event) => onCropToWallChange(event.target.checked)}
@@ -162,19 +168,19 @@ export function ControlPanel({
         </label>
       )}
 
-      <div className={limitMessage ? 'limit-note warning' : 'limit-note'}>
+      <div className={limitMessage || layoutMessage ? 'limit-note warning' : 'limit-note'}>
         <strong>{totalCubes} cubes</strong>
         <span>
-          {limitMessage ??
+          {limitMessage ?? layoutMessage ??
             `${totalCubes * 9} stickers. Max ${MAX_GENERATION_CUBES} cubes; long mosaics scroll.`}
         </span>
       </div>
 
-      <button className="primary-button" disabled={generateDisabled} onClick={onGenerate}>
+      <button className={generateDisabled ? 'primary-button' : 'primary-button ready'} disabled={generateDisabled} onClick={onGenerate}>
         {isGenerating ? <Loader2 className="spin" size={18} /> : <Grid3X3 size={18} />}
-        {isGenerating ? 'Generating' : 'Generate instructions'}
+        {isGenerating ? 'Generating…' : 'Generate instructions'}
       </button>
-      <p className="status-line">{isLayoutPending ? 'Updating preview...' : status}</p>
+      <p className="status-line" role="status" aria-live="polite">{isLayoutPending ? 'Updating preview…' : status}</p>
     </aside>
   )
 }

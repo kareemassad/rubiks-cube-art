@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyMoves, faceColors, solvedState } from '../cube'
+import { applyMoves, faceColors, normalizeMoves, solvedState } from '../cube'
 import {
   chooseAutoLayout,
   buildOutputStickerGrid,
@@ -10,6 +10,7 @@ import {
   reverseMoves,
   suggestLayouts,
   splitIntoTargetFaces,
+  verifyBuildMoves,
 } from '../mosaic'
 import { nearestRubikColor } from '../image/palette'
 import type { StickerGrid, TargetFace } from '../../types'
@@ -20,32 +21,24 @@ describe('mosaic grid math', () => {
     expect(chooseAutoLayout(9, 1)).toEqual({ rows: 3, cols: 3 })
   })
 
-  it('suggests min, balanced, and max layouts that follow image orientation', () => {
+  it('suggests small, recommended, and detailed layouts that follow image orientation', () => {
     expect(suggestLayouts(16 / 9)).toEqual([
-      { label: 'Min', rows: 8, cols: 15 },
-      { label: 'Balanced', rows: 26, cols: 41 },
-      { label: 'Max', rows: 34, cols: 59 },
+      { label: 'Small', rows: 3, cols: 4 },
+      { label: 'Recommended', rows: 5, cols: 6 },
+      { label: 'Detailed', rows: 6, cols: 10 },
     ])
 
     expect(suggestLayouts(9 / 16)).toEqual([
-      { label: 'Min', rows: 15, cols: 8 },
-      { label: 'Balanced', rows: 53, cols: 20 },
-      { label: 'Max', rows: 69, cols: 29 },
+      { label: 'Small', rows: 4, cols: 3 },
+      { label: 'Recommended', rows: 6, cols: 5 },
+      { label: 'Detailed', rows: 10, cols: 6 },
     ])
   })
 
-  it('scales layout suggestions down to the available cube count', () => {
-    expect(suggestLayouts(1, 30)).toEqual([
-      { label: 'Min', rows: 6, cols: 5 },
-      { label: 'Balanced', rows: 6, cols: 5 },
-      { label: 'Max', rows: 6, cols: 5 },
-    ])
+  it('keeps every preset at its exact cube count', () => {
+    const layouts = suggestLayouts(0.6)
 
-    expect(suggestLayouts(16 / 9, 300)).toEqual([
-      { label: 'Min', rows: 8, cols: 15 },
-      { label: 'Balanced', rows: 10, cols: 21 },
-      { label: 'Max', rows: 12, cols: 25 },
-    ])
+    expect(layouts.map((layout) => layout.rows * layout.cols)).toEqual([12, 30, 60])
   })
 
   it('splits a sticker grid into row-major 3x3 cube targets', () => {
@@ -82,6 +75,21 @@ describe('palette quantization', () => {
 })
 
 describe('cube generation', () => {
+  it('normalizes adjacent turns without changing the cube state', () => {
+    const raw = ['R', 'R', "R'", 'U']
+    const normalized = normalizeMoves(raw)
+
+    expect(normalized).toEqual(['R', 'U'])
+    expect(applyMoves(solvedState(), raw)).toBe(applyMoves(solvedState(), normalized))
+  })
+
+  it('verifies all nine visible target stickers', () => {
+    const target = faceColors(applyMoves(solvedState(), 'R'), 'G')
+
+    expect(verifyBuildMoves(['R'], target, 'G')).toBe(true)
+    expect(verifyBuildMoves([], target, 'G')).toBe(false)
+  })
+
   it('generates a legal solved-state solid face without moves', async () => {
     const target: TargetFace = [
       ['R', 'R', 'R'],
@@ -89,7 +97,7 @@ describe('cube generation', () => {
       ['R', 'R', 'R'],
     ]
 
-    const generated = await generateCubeForTarget(target, { mode: 'balanced', maxDepth: 2 })
+    const generated = await generateCubeForTarget(target)
 
     expect(generated.score.exact).toBe(true)
     expect(generated.buildMoves).toEqual([])
@@ -109,7 +117,6 @@ describe('cube generation', () => {
     const plan = await generateMosaicPlanFromGrid(grid, {
       rows: 2,
       cols: 1,
-      optimizer: { mode: 'visual', maxDepth: 2, candidateLimit: 1600 },
     })
 
     expect(plan.cacheStats.hits).toBe(1)
@@ -122,7 +129,7 @@ describe('cube generation', () => {
     const knownState = applyMoves(solvedState(), ['R'])
     const target = faceColors(knownState, 'G')
 
-    const generated = await generateCubeForTarget(target, { mode: 'balanced', maxDepth: 2 })
+    const generated = await generateCubeForTarget(target)
     const rebuilt = applyMoves(solvedState(), generated.buildMoves)
 
     expect(generated.score.exact).toBe(true)
@@ -138,7 +145,7 @@ describe('cube generation', () => {
       ['B', 'R', 'Y'],
     ]
 
-    const generated = await generateCubeForTarget(target, { mode: 'moves', maxDepth: 1 })
+    const generated = await generateCubeForTarget(target)
     const rebuilt = applyMoves(solvedState(), generated.buildMoves)
 
     expect(generated.score.exact).toBe(true)
@@ -146,6 +153,7 @@ describe('cube generation', () => {
     expect(faceColors(rebuilt, generated.displayFace)).toEqual(generated.outputFace)
     expect(generated.outputFace).toEqual(target)
   })
+
 })
 
 describe('mosaic plan generation', () => {
@@ -160,7 +168,6 @@ describe('mosaic plan generation', () => {
     const plan = await generateMosaicPlanFromGrid(grid, {
       rows: 2,
       cols: 1,
-      optimizer: { mode: 'balanced', maxDepth: 1 },
     })
 
     expect(plan.cubes).toHaveLength(2)
@@ -182,7 +189,6 @@ describe('mosaic plan generation', () => {
     const plan = await generateMosaicPlanFromGrid(grid, {
       rows: 1,
       cols: 1,
-      optimizer: { mode: 'balanced', maxDepth: 1 },
     })
 
     expect(buildOutputStickerGrid(plan)).toEqual(plan.cubes[0].outputFace)
@@ -200,7 +206,6 @@ describe('mosaic plan generation', () => {
     await generateMosaicPlanFromGrid(grid, {
       rows: 2,
       cols: 1,
-      optimizer: { mode: 'balanced', maxDepth: 1 },
       onProgress: (progress) => completed.push(progress.completed),
     })
 

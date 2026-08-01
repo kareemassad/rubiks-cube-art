@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
-import { PreviewPanel } from './PreviewPanel'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { getSelectionScrollBehavior, PreviewPanel } from './PreviewPanel'
 import type { GeneratedCube, GeneratedCubeGroup, MosaicPlan, TargetFace } from '../types'
 
 const pdfExportMock = vi.fn(() => <a href="/test.pdf">Export PDF</a>)
@@ -8,6 +8,11 @@ const pdfExportMock = vi.fn(() => <a href="/test.pdf">Export PDF</a>)
 vi.mock('./PdfExport', () => ({
   PdfExport: pdfExportMock,
 }))
+
+afterEach(() => {
+  vi.clearAllMocks()
+  vi.unstubAllGlobals()
+})
 
 const face: TargetFace = [
   ['W', 'W', 'W'],
@@ -40,9 +45,22 @@ function plan(): MosaicPlan {
 }
 
 describe('PreviewPanel', () => {
+  it('uses instant scrolling when reduced motion is requested', () => {
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true })))
+
+    expect(getSelectionScrollBehavior()).toBe('auto')
+  })
+
+  it('uses smooth scrolling when reduced motion is not requested', () => {
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false })))
+
+    expect(getSelectionScrollBehavior()).toBe('smooth')
+  })
+
   it('does not load the PDF export module until the user asks for export', () => {
     const nextPlan = plan()
     const groups: GeneratedCubeGroup[] = [{ id: 'white', cube: nextPlan.cubes[0], indices: [0] }]
+    const onSelectCube = vi.fn()
 
     render(
       <PreviewPanel
@@ -56,14 +74,20 @@ describe('PreviewPanel', () => {
         isGenerating={false}
         isPreviewing={false}
         progress={null}
-        completedGroupIds={new Set()}
+        completedCubeIds={new Set()}
         celebratingGroupId={null}
+        selectedCubeIndex={null}
         onToggleComplete={() => undefined}
-        onInspectCube={() => undefined}
+        onSelectCube={onSelectCube}
       />,
     )
 
     expect(screen.getByRole('button', { name: /prepare pdf/i })).toBeInTheDocument()
+    expect(screen.getByText(/cube 1/i)).toBeInTheDocument()
+    const inspectButton = screen.getByRole('button', { name: /view instructions for cube 1/i })
+    expect(inspectButton).toBeInTheDocument()
+    fireEvent.click(inspectButton)
+    expect(onSelectCube).toHaveBeenCalledWith(0)
     expect(pdfExportMock).not.toHaveBeenCalled()
   })
 })

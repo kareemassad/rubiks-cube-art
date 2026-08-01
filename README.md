@@ -105,8 +105,9 @@ For heavier layouts, preview and generation work is pushed into Web Workers so t
 ## Current Limits
 
 - Generation is capped at 2,000 cubes for browser-side performance.
+- Large source images are capped at 1,600px for both preview and generation so the verified grid stays consistent and memory use stays bounded.
 - V1 targets one visible face per cube. Side and top colors only matter as needed to keep the cube state legal.
-- Most target faces are exact. If a requested visible face cannot be represented as a legal cube state, the generator can fall back to the closest available face.
+- Every generated instruction face is exact. If a requested visible face cannot be represented as a legal cube state, generation stops instead of returning instructions that could build the wrong face.
 - PDF export is client-side and can be slower for very large mosaics.
 
 ## Attribution

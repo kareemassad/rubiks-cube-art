@@ -6,6 +6,8 @@ export type QuantizeOptions = {
   cropToWall?: boolean
 }
 
+export const MAX_PREVIEW_SOURCE_DIMENSION = 1600
+
 const RUBIK_PALETTE: Readonly<Record<RubikColor, Rgb>> = {
   W: { r: 248, g: 250, b: 252 },
   Y: { r: 255, g: 213, b: 0 },
@@ -77,18 +79,25 @@ export function findContentCropBox(
 }
 
 export function cropToAspect(crop: CropBox, targetAspect: number, sourceWidth: number, sourceHeight: number): CropBox {
-  const cropAspect = crop.sw / crop.sh
-  if (Math.abs(cropAspect - targetAspect) < 0.001) return crop
+  const safeCrop = {
+    sx: Math.max(0, Math.min(sourceWidth - 1, Math.round(crop.sx))),
+    sy: Math.max(0, Math.min(sourceHeight - 1, Math.round(crop.sy))),
+    sw: Math.max(1, Math.min(sourceWidth, Math.round(crop.sw))),
+    sh: Math.max(1, Math.min(sourceHeight, Math.round(crop.sh))),
+  }
+  const safeTargetAspect = Math.max(0.0001, targetAspect)
+  const cropAspect = safeCrop.sw / safeCrop.sh
+  if (Math.abs(cropAspect - safeTargetAspect) < 0.001) return safeCrop
 
-  if (cropAspect > targetAspect) {
-    const nextWidth = Math.round(crop.sh * targetAspect)
-    const sx = Math.max(0, Math.min(sourceWidth - nextWidth, crop.sx + Math.round((crop.sw - nextWidth) / 2)))
-    return { sx, sy: crop.sy, sw: nextWidth, sh: crop.sh }
+  if (cropAspect > safeTargetAspect) {
+    const nextWidth = Math.max(1, Math.min(safeCrop.sw, Math.round(safeCrop.sh * safeTargetAspect)))
+    const sx = Math.max(0, Math.min(sourceWidth - nextWidth, safeCrop.sx + Math.round((safeCrop.sw - nextWidth) / 2)))
+    return { sx, sy: safeCrop.sy, sw: nextWidth, sh: safeCrop.sh }
   }
 
-  const nextHeight = Math.round(crop.sw / targetAspect)
-  const sy = Math.max(0, Math.min(sourceHeight - nextHeight, crop.sy + Math.round((crop.sh - nextHeight) / 2)))
-  return { sx: crop.sx, sy, sw: crop.sw, sh: nextHeight }
+  const nextHeight = Math.max(1, Math.min(safeCrop.sh, Math.round(safeCrop.sw / safeTargetAspect)))
+  const sy = Math.max(0, Math.min(sourceHeight - nextHeight, safeCrop.sy + Math.round((safeCrop.sh - nextHeight) / 2)))
+  return { sx: safeCrop.sx, sy, sw: safeCrop.sw, sh: nextHeight }
 }
 
 export function containDrawBox(sourceWidth: number, sourceHeight: number, targetWidth: number, targetHeight: number) {
@@ -103,6 +112,25 @@ export function containDrawBox(sourceWidth: number, sourceHeight: number, target
   }
 }
 
+export function previewSourceSize(
+  sourceWidth: number,
+  sourceHeight: number,
+  minimumWidth = 1,
+  minimumHeight = 1,
+) {
+  const safeWidth = Math.max(1, sourceWidth)
+  const safeHeight = Math.max(1, sourceHeight)
+  const requiredWidth = Math.min(safeWidth, Math.max(1, Math.round(minimumWidth)))
+  const requiredHeight = Math.min(safeHeight, Math.max(1, Math.round(minimumHeight)))
+  const minimumScale = Math.max(requiredWidth / safeWidth, requiredHeight / safeHeight)
+  const cappedScale = Math.min(1, MAX_PREVIEW_SOURCE_DIMENSION / safeWidth, MAX_PREVIEW_SOURCE_DIMENSION / safeHeight)
+  const scale = Math.max(minimumScale, cappedScale)
+  return {
+    width: Math.max(requiredWidth, Math.max(1, Math.round(safeWidth * scale))),
+    height: Math.max(requiredHeight, Math.max(1, Math.round(safeHeight * scale))),
+  }
+}
+
 export async function quantizeImage(
   image: HTMLImageElement | ImageBitmap,
   cubeRows: number,
@@ -112,8 +140,11 @@ export async function quantizeImage(
   const width = cubeCols * 3
   const height = cubeRows * 3
   const canvas = document.createElement('canvas')
-  const sourceWidth = 'naturalWidth' in image ? image.naturalWidth : image.width
-  const sourceHeight = 'naturalHeight' in image ? image.naturalHeight : image.height
+  const originalWidth = 'naturalWidth' in image ? image.naturalWidth : image.width
+  const originalHeight = 'naturalHeight' in image ? image.naturalHeight : image.height
+  const sourceSize = previewSourceSize(originalWidth, originalHeight, width, height)
+  const sourceWidth = sourceSize.width
+  const sourceHeight = sourceSize.height
   canvas.width = sourceWidth
   canvas.height = sourceHeight
   const sourceCtx = canvas.getContext('2d', { willReadFrequently: true })
@@ -137,10 +168,10 @@ export async function quantizeImage(
   ctx.fillStyle = '#fff'
   ctx.fillRect(0, 0, width, height)
   if (options.cropToWall ?? true) {
-    ctx.drawImage(image, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, width, height)
+    ctx.drawImage(canvas, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, width, height)
   } else {
     const box = containDrawBox(sourceWidth, sourceHeight, width, height)
-    ctx.drawImage(image, 0, 0, sourceWidth, sourceHeight, box.dx, box.dy, box.dw, box.dh)
+    ctx.drawImage(canvas, 0, 0, sourceWidth, sourceHeight, box.dx, box.dy, box.dw, box.dh)
   }
   const data = ctx.getImageData(0, 0, width, height).data
   const grid: StickerGrid = []

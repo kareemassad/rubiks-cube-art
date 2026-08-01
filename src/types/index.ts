@@ -4,7 +4,6 @@ export type {
   MosaicPlan,
   MosaicProgress,
   MountRotation,
-  OptimizerOptions,
   RubikColor,
   StickerGrid,
   TargetFace,

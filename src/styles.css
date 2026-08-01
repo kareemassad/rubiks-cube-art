@@ -1,8 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
-
 :root {
   color-scheme: light;
-  font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   color: #18212f;
   background: #e9ece8;
   font-synthesis: none;
@@ -17,6 +15,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overflow-x: hidden;
   background:
     linear-gradient(90deg, rgba(24, 33, 47, 0.04) 1px, transparent 1px),
     linear-gradient(0deg, rgba(24, 33, 47, 0.04) 1px, transparent 1px),
@@ -27,10 +26,18 @@ body {
 button,
 input {
   font: inherit;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 button {
   border: 0;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid #0057b8;
+  outline-offset: 2px;
 }
 
 .app-shell {
@@ -63,10 +70,11 @@ button {
 
 h1,
 h2 {
-  font-family: 'Archivo Black', Impact, sans-serif;
+  font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
   margin: 0;
   letter-spacing: 0;
   color: #111827;
+  text-wrap: balance;
 }
 
 h1 {
@@ -399,6 +407,10 @@ input[type='range'] {
   background: #c1121f;
 }
 
+.primary-button.ready {
+  box-shadow: 0 4px 0 #18212f;
+}
+
 .secondary-button {
   color: #111827;
   background: #ffd500;
@@ -467,10 +479,84 @@ input[type='range'] {
   background: #111827;
 }
 
+.sticker-preview-canvas {
+  position: relative;
+}
+
 .sticker-preview {
   display: grid;
   gap: 2px;
   background: #111827;
+  width: 100%;
+}
+
+.cube-selection-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.cube-selection-button {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.cube-selection-button:focus-visible {
+  outline: none;
+}
+
+.cube-selection-focus,
+.cube-selection-selected {
+  position: absolute;
+  display: grid;
+  place-items: end;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.cube-selection-focus {
+  border: 3px solid transparent;
+}
+
+.cube-selection-button:focus-visible .cube-selection-focus,
+.cube-selection-button.selected .cube-selection-focus {
+  border-color: #ffd500;
+  background: rgba(255, 213, 0, 0.16);
+  box-shadow: inset 0 0 0 2px #111827, 0 0 0 2px #ffd500;
+}
+
+.cube-selection-selected {
+  border: 3px solid #ffd500;
+  background: rgba(255, 213, 0, 0.16);
+  box-shadow: inset 0 0 0 2px #111827, 0 0 0 2px #ffd500;
+}
+
+.cube-selection-label {
+  margin: 0 5px 5px 0;
+  min-width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  border: 2px solid #111827;
+  border-radius: 999px;
+  background: #ffd500;
+  color: #111827;
+  font-size: 11px;
+  font-weight: 900;
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cube-selection-label {
+    transition: transform 140ms ease;
+  }
 }
 
 .sticker {
@@ -562,6 +648,8 @@ input[type='range'] {
 
 .cube-card {
   position: relative;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 220px;
   min-height: 164px;
   display: grid;
   place-items: center;
@@ -576,6 +664,7 @@ input[type='range'] {
 .cube-card.highlighted {
   outline: 5px solid #ffd500;
   outline-offset: 3px;
+  background: #fff7cc;
 }
 
 .cube-card.completed .cube-card-title span {
@@ -669,11 +758,18 @@ input[type='range'] {
 
 .cube-card-title {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 3px;
   font-weight: 900;
   text-align: center;
+}
+
+.cube-card-title small {
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .cube-instruction {
@@ -694,6 +790,19 @@ input[type='range'] {
   border: 0;
   background: transparent;
   cursor: pointer;
+}
+
+.face-inspect:focus-visible {
+  outline: 3px solid #0057b8;
+  outline-offset: 5px;
+}
+
+.face-inspect-label {
+  display: block;
+  margin-top: 9px;
+  color: #0057b8;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .target-face {
@@ -725,6 +834,17 @@ input[type='range'] {
   border: 3px solid;
   background: #ffffff;
   padding: 2px 7px 2px 2px;
+  transition: opacity 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+}
+
+.move-chips li.played {
+  opacity: 0.62;
+}
+
+.move-chips li.active {
+  background: #fff7cc;
+  box-shadow: 0 4px 0 #111827;
+  transform: translateY(-2px);
 }
 
 .move-chips strong {
@@ -744,6 +864,7 @@ input[type='range'] {
   font-size: 12px;
   font-weight: 900;
   text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .no-move {
@@ -832,6 +953,8 @@ input[type='range'] {
   place-items: center;
   padding: 22px;
   background: rgba(17, 24, 39, 0.62);
+  overscroll-behavior: contain;
+  touch-action: manipulation;
 }
 
 .instruction-modal {
@@ -842,6 +965,8 @@ input[type='range'] {
   background: #fffdf7;
   box-shadow: 10px 10px 0 #111827;
   padding: 18px;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-header,
@@ -852,9 +977,17 @@ input[type='range'] {
   gap: 14px;
 }
 
+.modal-header {
+  position: sticky;
+  top: -18px;
+  z-index: 3;
+  padding-bottom: 10px;
+  background: #fffdf7;
+}
+
 .icon-button {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   display: inline-grid;
   place-items: center;
   border: 2px solid #111827;
@@ -899,10 +1032,15 @@ input[type='range'] {
 
 .player-controls {
   margin-top: 14px;
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  padding: 10px 0 2px;
+  background: #eef5ff;
 }
 
 .player-controls button {
-  min-height: 42px;
+  min-height: 44px;
   flex: 1;
   border: 2px solid #111827;
   background: #ffd500;
@@ -955,6 +1093,102 @@ input[type='range'] {
   }
 }
 
+@media (max-width: 820px) {
+  .instruction-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .instruction-side {
+    padding: 12px;
+  }
+
+  .player-cube3d {
+    height: 240px;
+  }
+}
+
+@media (max-width: 720px) {
+  .hero-band {
+    min-height: 0;
+    border-radius: 24px;
+    box-shadow: 6px 6px 0 #18212f;
+  }
+
+  .hero-sample {
+    grid-template-columns: repeat(3, 36px);
+    gap: 5px;
+    width: max-content;
+    padding: 8px;
+  }
+
+  .lede {
+    font-size: 16px;
+  }
+
+  .control-panel,
+  .preview-panel,
+  .cube-card {
+    border-radius: 20px;
+    box-shadow: 0 10px 22px rgba(24, 33, 47, 0.14);
+  }
+
+  .modal-backdrop {
+    place-items: end;
+    padding: 0;
+  }
+
+  .instruction-modal {
+    width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-width: 0;
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -12px 32px rgba(17, 24, 39, 0.24);
+    padding: 14px 16px calc(18px + env(safe-area-inset-bottom));
+  }
+
+  .modal-header {
+    top: -14px;
+    margin: -14px -16px 0;
+    padding: 14px 16px 10px;
+    border-bottom: 2px solid rgba(17, 24, 39, 0.12);
+  }
+
+  .instruction-grid {
+    gap: 12px;
+  }
+
+  .cube-net {
+    display: block;
+    max-width: 300px;
+    margin: 0 auto;
+  }
+
+  .player-cube3d {
+    height: 220px;
+  }
+
+  .instruction-side {
+    padding: 12px;
+  }
+
+  .move-chips li {
+    min-height: 40px;
+  }
+
+  .player-controls {
+    bottom: -14px;
+    margin: 14px -12px 0;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .primary-button.ready {
+    position: sticky;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    z-index: 6;
+  }
+}
+
 @media (max-width: 560px) {
   .app-shell {
     width: min(100% - 18px, 1480px);
@@ -966,9 +1200,22 @@ input[type='range'] {
     padding: 18px;
   }
 
+  .hero-sample {
+    grid-template-columns: repeat(3, 30px);
+    gap: 4px;
+    padding: 7px;
+  }
+
   .preview-panel {
     min-height: 420px;
     padding: 18px;
+  }
+
+  .cube-selection-label {
+    margin: 0 2px 2px 0;
+    min-width: 20px;
+    height: 20px;
+    font-size: 10px;
   }
 
   .field-grid,
@@ -993,5 +1240,16 @@ input[type='range'] {
 
   .instruction-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
   }
 }

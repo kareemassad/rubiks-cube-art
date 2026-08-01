@@ -1,12 +1,11 @@
 import { generateMosaicPlanFromGrid } from '../mosaic'
-import type { MosaicPlan, MosaicProgress, OptimizerOptions, StickerGrid } from '../../types'
+import type { MosaicPlan, MosaicProgress, StickerGrid } from '../../types'
 
 type GenerateRequest = {
   id: number
   stickerGrid: StickerGrid
   rows: number
   cols: number
-  optimizer: Partial<OptimizerOptions>
 }
 
 type WorkerResponse =
@@ -19,13 +18,12 @@ function post(response: WorkerResponse) {
 }
 
 self.onmessage = async (event: MessageEvent<GenerateRequest>) => {
-  const { id, stickerGrid, rows, cols, optimizer } = event.data
+  const { id, stickerGrid, rows, cols } = event.data
 
   try {
     const plan = await generateMosaicPlanFromGrid(stickerGrid, {
       rows,
       cols,
-      optimizer,
       onProgress: (progress) => post({ id, type: 'progress', progress }),
     })
     post({ id, type: 'complete', plan })
