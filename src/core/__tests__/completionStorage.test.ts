@@ -29,7 +29,7 @@ describe('completion storage', () => {
     ]
 
     expect(migrateCompletedGroupIds(new Set(['group-a', 'group-b', 'cube-2', 'unknown']), groups)).toEqual(
-      new Set(['group-a', 'cube-1', 'cube-2']),
+      new Set(['cube-1', 'cube-2']),
     )
   })
 })

@@ -31,11 +31,8 @@ export function migrateCompletedGroupIds(completedIds: Set<string>, groups: Gene
     const group = groupsById.get(id)
     if (!group) continue
 
-    if (group.indices.length === 1) {
-      migrated.add(`cube-${group.indices[0]}`)
-    } else {
-      migrated.add(id)
-    }
+    if (group.indices.length !== 1) continue
+    migrated.add(`cube-${group.indices[0]}`)
   }
 
   return migrated
