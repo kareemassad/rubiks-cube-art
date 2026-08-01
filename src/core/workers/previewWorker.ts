@@ -32,7 +32,7 @@ function context2d(canvas: OffscreenCanvas): OffscreenCanvasRenderingContext2D {
 function quantizeBitmap(image: ImageBitmap, cubeRows: number, cubeCols: number, cropToWall: boolean): StickerGrid {
   const width = cubeCols * 3
   const height = cubeRows * 3
-  const sourceSize = previewSourceSize(image.width, image.height)
+  const sourceSize = previewSourceSize(image.width, image.height, width, height)
   const sourceWidth = sourceSize.width
   const sourceHeight = sourceSize.height
 

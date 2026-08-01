@@ -36,4 +36,9 @@ describe('preview source sizing', () => {
   it('caps large images while preserving their aspect ratio', () => {
     expect(previewSourceSize(4000, 2000)).toEqual({ width: 1600, height: 800 })
   })
+
+  it('does not downscale below the requested output dimensions', () => {
+    expect(previewSourceSize(4000, 2000, 3000, 1500)).toEqual({ width: 3000, height: 1500 })
+    expect(previewSourceSize(10000, 100, 6000, 3).width).toBeGreaterThanOrEqual(6000)
+  })
 })

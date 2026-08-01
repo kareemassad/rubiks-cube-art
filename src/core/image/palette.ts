@@ -105,11 +105,17 @@ export function containDrawBox(sourceWidth: number, sourceHeight: number, target
   }
 }
 
-export function previewSourceSize(sourceWidth: number, sourceHeight: number) {
-  const scale = Math.min(1, MAX_PREVIEW_SOURCE_DIMENSION / sourceWidth, MAX_PREVIEW_SOURCE_DIMENSION / sourceHeight)
+export function previewSourceSize(sourceWidth: number, sourceHeight: number, minimumWidth = 1, minimumHeight = 1) {
+  const safeWidth = Math.max(1, sourceWidth)
+  const safeHeight = Math.max(1, sourceHeight)
+  const requiredWidth = Math.min(safeWidth, Math.max(1, Math.round(minimumWidth)))
+  const requiredHeight = Math.min(safeHeight, Math.max(1, Math.round(minimumHeight)))
+  const minimumScale = Math.max(requiredWidth / safeWidth, requiredHeight / safeHeight)
+  const cappedScale = Math.min(1, MAX_PREVIEW_SOURCE_DIMENSION / safeWidth, MAX_PREVIEW_SOURCE_DIMENSION / safeHeight)
+  const scale = Math.max(minimumScale, cappedScale)
   return {
-    width: Math.max(1, Math.round(sourceWidth * scale)),
-    height: Math.max(1, Math.round(sourceHeight * scale)),
+    width: Math.max(requiredWidth, Math.max(1, Math.round(safeWidth * scale))),
+    height: Math.max(requiredHeight, Math.max(1, Math.round(safeHeight * scale))),
   }
 }
 
@@ -124,7 +130,7 @@ export async function quantizeImage(
   const canvas = document.createElement('canvas')
   const originalWidth = 'naturalWidth' in image ? image.naturalWidth : image.width
   const originalHeight = 'naturalHeight' in image ? image.naturalHeight : image.height
-  const sourceSize = previewSourceSize(originalWidth, originalHeight)
+  const sourceSize = previewSourceSize(originalWidth, originalHeight, width, height)
   const sourceWidth = sourceSize.width
   const sourceHeight = sourceSize.height
   canvas.width = sourceWidth

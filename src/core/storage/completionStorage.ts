@@ -1,3 +1,5 @@
+import type { GeneratedCubeGroup } from '../../types'
+
 const COMPLETION_STORAGE_PREFIX = 'rubiks-cube-art:completed:'
 
 function completionKey(planHash: string): string {
@@ -13,6 +15,25 @@ export function readCompletedGroups(storage: Storage | undefined, planHash: stri
   } catch {
     return new Set()
   }
+}
+
+export function migrateCompletedGroupIds(completedIds: Set<string>, groups: GeneratedCubeGroup[]): Set<string> {
+  const validCubeIds = new Set(groups.flatMap((group) => group.indices.map((index) => `cube-${index}`)))
+  const groupToCubeIds = new Map(
+    groups.map((group) => [group.id, group.indices.map((index) => `cube-${index}`)]),
+  )
+  const migrated = new Set<string>()
+
+  for (const id of completedIds) {
+    if (validCubeIds.has(id)) {
+      migrated.add(id)
+      continue
+    }
+
+    for (const cubeId of groupToCubeIds.get(id) ?? []) migrated.add(cubeId)
+  }
+
+  return migrated
 }
 
 export function writeCompletedGroups(storage: Storage | undefined, planHash: string, groupIds: Set<string>): void {

@@ -1,6 +1,6 @@
 import { applyMoves, faceColors, normalizeMoves, solveState, solvedState, targetKey } from '../cube'
 import { buildExactFaceletState } from '../cube/exactFace'
-import { CUBE_PRESET_COUNTS } from '../layout'
+import { CUBE_PRESET_COUNTS, chooseAutoLayout } from '../layout'
 import type {
   GeneratedCube,
   GeneratedCubeGroup,
@@ -18,25 +18,7 @@ type SuggestedLayout = {
   cols: number
 }
 
-export function chooseAutoLayout(cubeCount: number, imageAspectRatio: number): { rows: number; cols: number } {
-  const target = Math.max(1, Math.round(cubeCount))
-  let best = { rows: 1, cols: target }
-  let bestScore = Number.POSITIVE_INFINITY
-  const targetAspect = Math.max(0.01, imageAspectRatio)
-
-  for (let rows = 1; rows <= target; rows++) {
-    if (target % rows !== 0) continue
-    const cols = target / rows
-    const aspect = cols / rows
-    const score = Math.abs(Math.log(aspect / targetAspect)) + Math.abs(Math.log(aspect)) * 0.01
-    if (score < bestScore) {
-      best = { rows, cols }
-      bestScore = score
-    }
-  }
-
-  return best
-}
+export { chooseAutoLayout } from '../layout'
 
 export function suggestLayouts(imageAspectRatio: number): SuggestedLayout[] {
   return CUBE_PRESET_COUNTS.map(({ label, count }) => ({ label, ...chooseAutoLayout(count, imageAspectRatio) }))

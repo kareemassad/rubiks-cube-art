@@ -2,6 +2,12 @@ import { memo } from 'react'
 import { COLOR_HEX } from '../core/cube'
 import type { StickerGrid } from '../types'
 
+export function previewWidthFor(cols: number, stickerSize: number): string {
+  const stickerColumns = cols * 3
+  const stickerGap = 2
+  return `max(100%, ${stickerColumns * stickerSize + Math.max(0, stickerColumns - 1) * stickerGap}px)`
+}
+
 function StickerGridPreviewComponent({
   grid,
   cols,
@@ -21,7 +27,8 @@ function StickerGridPreviewComponent({
   const cubeRows = rows ?? gridRows
   const totalCubes = cubeRows * cols
   const stickerSize = totalCubes >= 1200 ? 4 : totalCubes >= 400 ? 6 : totalCubes >= 120 ? 8 : 12
-  const previewWidth = `max(100%, ${cols * 3 * stickerSize}px)`
+  const stickerColumns = cols * 3
+  const previewWidth = previewWidthFor(cols, stickerSize)
   const isInteractive = Boolean(onSelectCube && rows)
 
   return (
@@ -29,7 +36,7 @@ function StickerGridPreviewComponent({
       <div className="sticker-preview-canvas" style={{ width: previewWidth }}>
         <div
           className="sticker-preview"
-          style={{ gridTemplateColumns: `repeat(${cols * 3}, minmax(${stickerSize}px, 1fr))` }}
+          style={{ gridTemplateColumns: `repeat(${stickerColumns}, minmax(${stickerSize}px, 1fr))` }}
           aria-label={label}
         >
           {grid.flatMap((row, rowIndex) =>

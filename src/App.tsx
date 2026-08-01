@@ -5,7 +5,11 @@ import { buildOutputStickerGrid, groupGeneratedCubes, suggestLayouts } from './c
 import { generateMosaicPlan } from './core/workers/generateClient'
 import { quantizeImagePreview } from './core/workers/previewClient'
 import { hashMosaicPlan } from './core/mosaic/planIdentity'
-import { readCompletedGroups, writeCompletedGroups } from './core/storage/completionStorage'
+import {
+  migrateCompletedGroupIds,
+  readCompletedGroups,
+  writeCompletedGroups,
+} from './core/storage/completionStorage'
 import { MOUNT_COPY, RUBIK_COLOR_NAMES } from './constants/rubiks'
 import { ControlPanel } from './components/ControlPanel'
 import { PreviewPanel } from './components/PreviewPanel'
@@ -164,21 +168,66 @@ export function InstructionPlayer({
 }) {
   const [step, setStep] = useState(0)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const modalRef = useRef<HTMLElement>(null)
   const visibleMoves = cube.buildMoves.slice(0, step)
   const state = applyMoves(solvedState(), visibleMoves)
   const nextMove = cube.buildMoves[step]
 
   useEffect(() => {
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const dialog = modalRef.current
+    if (!dialog) return
+
+    const focusableSelector = [
+      'button:not([disabled])',
+      'a[href]',
+      'input:not([disabled])',
+      'select:not([disabled])',
+      'textarea:not([disabled])',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(',')
+    const getFocusableElements = () => Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector))
+
     closeButtonRef.current?.focus()
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onClose()
+        return
+      }
+
+      if (event.key !== 'Tab') return
+      const focusableElements = getFocusableElements()
+      if (focusableElements.length === 0) {
+        event.preventDefault()
+        return
+      }
+
+      const first = focusableElements[0]
+      const last = focusableElements[focusableElements.length - 1]
+      const active = document.activeElement
+      if (!dialog!.contains(active)) {
+        event.preventDefault()
+        ;(event.shiftKey ? last : first).focus()
+      } else if (event.shiftKey && active === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    function handleFocusIn(event: FocusEvent) {
+      if (!dialog!.contains(event.target as Node)) closeButtonRef.current?.focus()
     }
 
     document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('focusin', handleFocusIn)
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('focusin', handleFocusIn)
       previousFocus?.focus()
     }
   }, [onClose])
@@ -191,7 +240,7 @@ export function InstructionPlayer({
       aria-labelledby={`cube-${index + 1}-instructions-title`}
       onClick={onClose}
     >
-      <section className="instruction-modal" onClick={(event) => event.stopPropagation()}>
+      <section ref={modalRef} className="instruction-modal" onClick={(event) => event.stopPropagation()}>
         <div className="modal-header">
           <div>
             <p className="eyebrow">Build instructions</p>
@@ -218,7 +267,7 @@ export function InstructionPlayer({
             <p>
               Hold the <strong>{RUBIK_COLOR_NAMES[cube.displayFace]}</strong> center facing you for every move. {MOUNT_COPY[cube.mountRotation]}.
             </p>
-            <MoveChips moves={cube.buildMoves} activeStep={step < cube.buildMoves.length ? step : -1} />
+            <MoveChips moves={cube.buildMoves} activeStep={step} />
             <div className="player-controls">
               <button onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0}>
                 Back
@@ -247,6 +296,7 @@ export default function App() {
   const [isPreviewing, setIsPreviewing] = useState(false)
   const [progress, setProgress] = useState<MosaicProgress | null>(null)
   const [selectedCubeIndex, setSelectedCubeIndex] = useState<number | null>(null)
+  const [instructionCubeIndex, setInstructionCubeIndex] = useState<number | null>(null)
   const [cropToWall, setCropToWall] = useState(true)
   const [completedCubeIds, setCompletedCubeIds] = useState<Set<string>>(() => new Set())
   const [celebratingGroupId, setCelebratingGroupId] = useState<string | null>(null)
@@ -326,6 +376,7 @@ export default function App() {
     setSelectedPreset(null)
     setPlan(null)
     setSelectedCubeIndex(null)
+    setInstructionCubeIndex(null)
     setQuantizedPreview(null)
     setProgress(null)
     setStatus(`Loaded ${file.name}. Auto-fit chose ${layout.rows} x ${layout.cols}.`)
@@ -340,6 +391,7 @@ export default function App() {
     setSelectedPreset(layout.label)
     setPlan(null)
     setSelectedCubeIndex(null)
+    setInstructionCubeIndex(null)
     setProgress(null)
     setStatus(`Layout updated to ${nextRows} x ${nextCols} cubes.`)
   }
@@ -353,6 +405,7 @@ export default function App() {
     setSelectedPreset(null)
     setPlan(null)
     setSelectedCubeIndex(null)
+    setInstructionCubeIndex(null)
     setProgress(null)
     setStatus(`Using ${count} cubes as ${layout.rows} x ${layout.cols}.`)
   }
@@ -370,7 +423,10 @@ export default function App() {
       })
       setPlan(nextPlan)
       setSelectedCubeIndex(null)
-      setCompletedCubeIds(readCompletedGroups(globalThis.localStorage, hashMosaicPlan(nextPlan)))
+      setInstructionCubeIndex(null)
+      const nextGroups = groupGeneratedCubes(nextPlan.cubes)
+      const storedCompletions = readCompletedGroups(globalThis.localStorage, hashMosaicPlan(nextPlan))
+      setCompletedCubeIds(migrateCompletedGroupIds(storedCompletions, nextGroups))
       setCelebratingGroupId(null)
       const exact = nextPlan.cubes.filter((cube) => cube.score.exact).length
       setStatus(
@@ -390,6 +446,7 @@ export default function App() {
     setSelectedPreset(null)
     setPlan(null)
     setSelectedCubeIndex(null)
+    setInstructionCubeIndex(null)
     setProgress(null)
   }
 
@@ -400,7 +457,13 @@ export default function App() {
     setSelectedPreset(null)
     setPlan(null)
     setSelectedCubeIndex(null)
+    setInstructionCubeIndex(null)
     setProgress(null)
+  }
+
+  function selectCube(cubeIndex: number) {
+    setSelectedCubeIndex(cubeIndex)
+    setInstructionCubeIndex(cubeIndex)
   }
 
   const toggleComplete = useCallback((cubeIndex: number) => {
@@ -494,16 +557,16 @@ export default function App() {
           celebratingGroupId={celebratingGroupId}
           onToggleComplete={toggleComplete}
           selectedCubeIndex={selectedCubeIndex}
-          onSelectCube={setSelectedCubeIndex}
+          onSelectCube={selectCube}
         />
       </section>
-      {plan && selectedCubeIndex !== null && plan.cubes[selectedCubeIndex] ? (
+      {plan && instructionCubeIndex !== null && plan.cubes[instructionCubeIndex] ? (
         <InstructionPlayer
-          key={selectedCubeIndex}
-          cube={plan.cubes[selectedCubeIndex]}
-          index={selectedCubeIndex}
+          key={instructionCubeIndex}
+          cube={plan.cubes[instructionCubeIndex]}
+          index={instructionCubeIndex}
           totalCubes={plan.cubes.length}
-          onClose={() => setSelectedCubeIndex(null)}
+          onClose={() => setInstructionCubeIndex(null)}
         />
       ) : null}
     </main>

@@ -58,6 +58,8 @@ export function chooseLayoutForCubeCount(count: number, imageAspectRatio: number
   return best
 }
 
+export const chooseAutoLayout = chooseLayoutForCubeCount
+
 export function layoutLimitMessage(rows: number, cols: number): string | null {
   const total = cubeCount(rows, cols)
   if (total <= MAX_GENERATION_CUBES) return null
