@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { COLOR_HEX } from '../core/cube'
 import type { StickerGrid } from '../types'
 
@@ -44,7 +44,7 @@ function StickerGridPreviewComponent({
     setFocusedCubeIndex((current) => Math.min(current, Math.max(0, totalCubes - 1)))
   }, [totalCubes])
 
-  function moveCubeFocus(cubeIndex: number, key: string, event: React.KeyboardEvent<HTMLButtonElement>) {
+  function moveCubeFocus(cubeIndex: number, key: string, event: KeyboardEvent<HTMLButtonElement>) {
     const currentRow = Math.floor(cubeIndex / cols)
     const currentColumn = cubeIndex % cols
     let nextRow = currentRow
@@ -115,6 +115,7 @@ function StickerGridPreviewComponent({
                 aria-label={`Select cube ${cubeIndex + 1}`}
                 aria-pressed={selectedCubeIndex === cubeIndex}
                 title={`Cube ${cubeIndex + 1}`}
+                onFocus={() => setFocusedCubeIndex(cubeIndex)}
                 onClick={() => selectCube(cubeIndex)}
                 onKeyDown={(event) => moveCubeFocus(cubeIndex, event.key, event)}
               >

@@ -54,6 +54,7 @@ describe('layout limits', () => {
 
   it('explains when an exact count requires a single-row or single-column wall', () => {
     expect(layoutShapeMessage(13, { rows: 1, cols: 13 })).toContain('exact 13-cube layout')
+    expect(layoutShapeMessage(6, { rows: 1, cols: 6 })).toContain('for this image shape')
     expect(layoutShapeMessage(30, { rows: 5, cols: 6 })).toBeNull()
   })
 })

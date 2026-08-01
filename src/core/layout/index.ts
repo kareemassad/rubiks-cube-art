@@ -60,8 +60,19 @@ export function chooseLayoutForCubeCount(count: number, imageAspectRatio: number
 
 export function layoutShapeMessage(count: number, layout: { rows: number; cols: number }): string | null {
   const target = clampCubeDimension(count, MAX_GENERATION_CUBES)
-  if (target <= 4 || (layout.rows > 1 && layout.cols > 1)) return null
-  return `An exact ${target}-cube layout needs a single row or column. Use a nearby cube count for a more compact wall.`
+  if (target <= 1 || (layout.rows > 1 && layout.cols > 1)) return null
+
+  let hasBalancedFactorization = false
+  for (let divisor = 2; divisor * divisor <= target; divisor += 1) {
+    if (target % divisor === 0) {
+      hasBalancedFactorization = true
+      break
+    }
+  }
+
+  return hasBalancedFactorization
+    ? `The exact ${target}-cube layout is a single row or column (${layout.rows} x ${layout.cols}) for this image shape. Choose a nearby count for a more compact wall.`
+    : `An exact ${target}-cube layout needs a single row or column (${layout.rows} x ${layout.cols}). Choose a nearby count for a more compact wall.`
 }
 
 export const chooseAutoLayout = chooseLayoutForCubeCount
