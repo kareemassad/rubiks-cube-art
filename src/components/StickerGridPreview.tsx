@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef, useState } from 'react'
-import type { KeyboardEvent, MouseEvent } from 'react'
+import type { KeyboardEvent, MouseEvent, PointerEvent } from 'react'
 import { COLOR_HEX } from '../core/cube'
 import type { StickerGrid } from '../types'
 
@@ -64,12 +64,22 @@ function StickerGridPreviewComponent({
   const stickerScrollRef = useRef<HTMLDivElement | null>(null)
   const overlayRef = useRef<HTMLDivElement | null>(null)
   const focusedCellRef = useRef<HTMLSpanElement | null>(null)
+  const hoverCellRef = useRef<HTMLSpanElement | null>(null)
+  const hoveredCubeIndexRef = useRef<number | null>(null)
   const shouldScrollFocusedCellRef = useRef(false)
 
   useEffect(() => {
     if (selectedCubeIndex === null || selectedCubeIndex >= totalCubes) return
     setFocusedCubeIndex(selectedCubeIndex)
   }, [selectedCubeIndex, totalCubes])
+
+  useEffect(() => {
+    const hoverCell = hoverCellRef.current
+    const hoveredCubeIndex = hoveredCubeIndexRef.current
+    if (!hoverCell || hoveredCubeIndex === null) return
+
+    hoverCell.dataset.visible = hoveredCubeIndex !== focusedCubeIndex && hoveredCubeIndex !== selectedCubeIndex ? 'true' : 'false'
+  }, [focusedCubeIndex, selectedCubeIndex])
 
   useEffect(() => {
     setFocusedCubeIndex((current) => Math.min(current, Math.max(0, totalCubes - 1)))
@@ -146,6 +156,23 @@ function StickerGridPreviewComponent({
     selectCube(cubeIndex)
   }
 
+  function handlePointerMove(event: PointerEvent<HTMLButtonElement>) {
+    const hoverCell = hoverCellRef.current
+    if (!hoverCell) return
+
+    const cubeIndex = cubeIndexAtPoint(event.clientX, event.clientY)
+    if (hoveredCubeIndexRef.current === cubeIndex) return
+
+    hoveredCubeIndexRef.current = cubeIndex
+    Object.assign(hoverCell.style, cubeHighlightStyle(cubeIndex, cubeRows, cols))
+    hoverCell.dataset.visible = cubeIndex !== focusedCubeIndex && cubeIndex !== selectedCubeIndex ? 'true' : 'false'
+  }
+
+  function handlePointerLeave() {
+    hoveredCubeIndexRef.current = null
+    if (hoverCellRef.current) hoverCellRef.current.dataset.visible = 'false'
+  }
+
   return (
     <div ref={stickerScrollRef} className="sticker-scroll">
       <div className="sticker-preview-canvas" style={{ width: previewWidth }}>
@@ -183,6 +210,8 @@ function StickerGridPreviewComponent({
               title={`Cube ${focusedCubeIndex + 1}`}
               onClick={handleOverlayClick}
               onKeyDown={(event) => moveCubeFocus(focusedCubeIndex, event.key, event)}
+              onPointerMove={handlePointerMove}
+              onPointerLeave={handlePointerLeave}
             >
               <span ref={focusedCellRef} className="cube-selection-focus" style={cubeHighlightStyle(focusedCubeIndex, cubeRows, cols)} aria-hidden="true">
                 <span className="cube-selection-label">{focusedCubeIndex + 1}</span>
@@ -192,6 +221,7 @@ function StickerGridPreviewComponent({
                   <span className="cube-selection-label">{selectedCubeIndex + 1}</span>
                 </span>
               ) : null}
+              <span ref={hoverCellRef} className="cube-selection-hover" data-visible="false" aria-hidden="true" />
             </button>
           </div>
         ) : null}

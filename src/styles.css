@@ -513,7 +513,8 @@ input[type='range'] {
 }
 
 .cube-selection-focus,
-.cube-selection-selected {
+.cube-selection-selected,
+.cube-selection-hover {
   position: absolute;
   display: grid;
   place-items: end;
@@ -536,6 +537,16 @@ input[type='range'] {
   border: 3px solid #ffd500;
   background: rgba(255, 213, 0, 0.16);
   box-shadow: inset 0 0 0 2px #111827, 0 0 0 2px #ffd500;
+}
+
+.cube-selection-hover {
+  visibility: hidden;
+  border: 3px solid rgba(255, 213, 0, 0.9);
+  background: rgba(255, 213, 0, 0.12);
+}
+
+.cube-selection-hover[data-visible='true'] {
+  visibility: visible;
 }
 
 .cube-selection-label {
