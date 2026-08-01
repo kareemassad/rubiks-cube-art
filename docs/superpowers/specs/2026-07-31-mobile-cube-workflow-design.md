@@ -66,18 +66,15 @@ The sheet will not render instructions for every cube at once. The selected cube
 
 ### Move optimization and correctness
 
-The generator will use a bounded shortest-practical search.
+The generator will keep the existing simple `cubejs` solve path. `cubejs` searches for a near-optimal solution without adding a second candidate-search system.
 
 - Keep `cubejs` as the solver for legal cube states.
-- Try more than one legal full-cube completion when the target face leaves hidden pieces unconstrained.
-- Solve each candidate and keep the exact candidate with the fewest build moves.
-- Use a fixed candidate and depth budget so generation remains browser-safe.
 - Normalize move sequences before storing and displaying them.
 - Verify the final build moves by applying them to a solved cube and comparing the visible face with the requested target face.
 - Accept a result only when the visible face matches all nine target stickers.
-- If no exact result is found within the budget, stop generation with a clear error. Do not return an approximate result as a valid solution.
+- If the existing exact-state path cannot produce an exact result, stop generation with a clear error. Do not return an approximate result as a valid solution.
 
-The app may report that generation failed for a difficult target. A failed generation is safer than instructions that build the wrong face.
+A failed generation is safer than instructions that build the wrong face.
 
 ## Responsive and iOS-style improvements
 
@@ -124,9 +121,9 @@ Add or update component tests for:
 
 Add core tests for:
 
-- selecting the shortest exact candidate among the bounded candidate set;
+- using the simple solver path for legal cube states;
 - rejecting a candidate that does not reproduce all nine target stickers;
-- preserving legal, exact output when move optimization cannot find a shorter candidate.
+- preserving legal, exact output for generated target faces.
 
 Verify the following before the implementation commit:
 
