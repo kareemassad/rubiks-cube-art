@@ -119,4 +119,73 @@ describe('StickerGridPreview', () => {
 
     expect(scroll.scrollLeft).toBeGreaterThan(0)
   })
+
+  it('moves vertically and keeps the focused cube visible in a tall single-column mosaic', () => {
+    const grid: StickerGrid = [
+      ['W', 'W', 'W'],
+      ['W', 'W', 'W'],
+      ['W', 'W', 'W'],
+      ['W', 'W', 'W'],
+      ['W', 'W', 'W'],
+      ['W', 'W', 'W'],
+      ['W', 'W', 'W'],
+      ['W', 'W', 'W'],
+      ['W', 'W', 'W'],
+    ]
+    const { container } = render(<StickerGridPreview grid={grid} cols={1} rows={3} onSelectCube={() => undefined} />)
+    const button = screen.getByRole('button', { name: /select cube 1/i })
+    const focusedCell = container.querySelector('.cube-selection-focus') as HTMLSpanElement
+    const scrollIntoView = vi.fn()
+    focusedCell.scrollIntoView = scrollIntoView
+
+    fireEvent.keyDown(button, { key: 'ArrowDown' })
+
+    expect(button).toHaveAccessibleName('Select cube 2. Use arrow keys to move.')
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' })
+
+    scrollIntoView.mockClear()
+    fireEvent.keyDown(button, { key: 'ArrowUp' })
+
+    expect(button).toHaveAccessibleName('Select cube 1. Use arrow keys to move.')
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' })
+  })
+
+  it('shows the hovered cube without changing the focused cube', () => {
+    const grid: StickerGrid = Array.from({ length: 6 }, () => Array.from({ length: 6 }, () => 'W'))
+    const { container } = render(<StickerGridPreview grid={grid} cols={2} rows={2} onSelectCube={() => undefined} />)
+    const overlay = container.querySelector('.cube-selection-overlay') as HTMLDivElement
+    vi.spyOn(overlay, 'getBoundingClientRect').mockReturnValue({
+      bottom: 200,
+      height: 200,
+      left: 0,
+      right: 200,
+      top: 0,
+      width: 200,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    } as DOMRect)
+
+    const button = screen.getByRole('button', { name: /select cube 1/i })
+    const focus = container.querySelector('.cube-selection-focus')
+    expect(focus).toHaveAttribute('data-visible', 'false')
+
+    fireEvent.pointerMove(button, { clientX: 50, clientY: 50, pointerType: 'mouse' })
+
+    const hover = container.querySelector('.cube-selection-hover')
+    expect(hover).toHaveAttribute('data-visible', 'true')
+    expect(hover).toHaveTextContent('1')
+
+    fireEvent.pointerMove(button, { clientX: 150, clientY: 50, pointerType: 'mouse' })
+
+    expect(hover).toBeInTheDocument()
+    expect(hover).toHaveAttribute('data-visible', 'true')
+    expect(hover).toHaveTextContent('2')
+    expect(hover).toHaveStyle('left: calc(1 * ((100% - 2px) / 2 + 2px))')
+    expect(button).toHaveAccessibleName('Select cube 1. Use arrow keys to move.')
+
+    fireEvent.pointerLeave(button)
+
+    expect(hover).toHaveAttribute('data-visible', 'false')
+  })
 })

@@ -23,15 +23,31 @@ export function generateMosaicPlan(
   }
 
   const id = ++requestId
-  const worker = new Worker(new URL('./generateWorker.ts', import.meta.url), { type: 'module' })
+  let worker: Worker
+  try {
+    worker = new Worker(new URL('./generateWorker.ts', import.meta.url), { type: 'module' })
+  } catch {
+    return generateMosaicPlanFromGrid(stickerGrid, options)
+  }
 
   return new Promise((resolve, reject) => {
+    let settled = false
+
+    function fallbackToMainThread() {
+      if (settled) return
+      settled = true
+      worker.terminate()
+      generateMosaicPlanFromGrid(stickerGrid, options).then(resolve, reject)
+    }
+
     worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
+      if (settled) return
       if (event.data.id !== id) return
       if (event.data.type === 'progress') {
         options.onProgress?.(event.data.progress)
         return
       }
+      settled = true
       worker.terminate()
       if (event.data.type === 'complete') {
         resolve(event.data.plan)
@@ -40,10 +56,7 @@ export function generateMosaicPlan(
       }
     }
 
-    worker.onerror = (event) => {
-      worker.terminate()
-      reject(new Error(event.message || 'Generation worker failed.'))
-    }
+    worker.onerror = () => fallbackToMainThread()
 
     worker.postMessage({
       id,

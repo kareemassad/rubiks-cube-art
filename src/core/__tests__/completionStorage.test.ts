@@ -22,14 +22,14 @@ describe('completion storage', () => {
     expect(() => writeCompletedGroups(storage, 'plan-1', new Set(['group-a']))).not.toThrow()
   })
 
-  it('migrates legacy group completion to each physical cube', () => {
+  it('migrates only unambiguous legacy groups and preserves direct cube IDs', () => {
     const groups = [
       { id: 'group-a', cube: {} as never, indices: [0, 2] },
       { id: 'group-b', cube: {} as never, indices: [1] },
     ]
 
-    expect(migrateCompletedGroupIds(new Set(['group-a', 'cube-1', 'unknown']), groups)).toEqual(
-      new Set(['cube-0', 'cube-2', 'cube-1']),
+    expect(migrateCompletedGroupIds(new Set(['group-a', 'group-b', 'cube-2', 'unknown']), groups)).toEqual(
+      new Set(['cube-1', 'cube-2']),
     )
   })
 })

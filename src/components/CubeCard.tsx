@@ -32,7 +32,7 @@ function CubeCardComponent({
     highlighted ? 'highlighted' : '',
   ].filter(Boolean).join(' ')
   return (
-    <article id={id} className={className}>
+    <article id={id} className={className} style={{ paddingLeft: 14, paddingRight: 14 }}>
       {celebrating ? (
         <div className="confetti-burst" aria-hidden="true">
           {CONFETTI_PIECES.map((id) => (
